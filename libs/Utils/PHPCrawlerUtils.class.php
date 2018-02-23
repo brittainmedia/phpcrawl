@@ -8,7 +8,7 @@
 class PHPCrawlerUtils
 {
   /**
-   * Splits an URL/URI into its parts
+   * Splits an URL into its parts
    *
    * @param string $url  The URL
    * @return array       An array containig the parts of the URL
@@ -26,7 +26,7 @@ class PHPCrawlerUtils
    */
   public static function splitURL($url)
   {
-    // Protokoll der URL hinzufÃ¼gen (da ansonsten parse_url nicht klarkommt)
+    // Protokoll der URL hinzufügen (da ansonsten parse_url nicht klarkommt)
     if (!preg_match("#^[a-z0-9-]+://# i", $url))
       $url = "http://" . $url;
     
@@ -74,13 +74,13 @@ class PHPCrawlerUtils
       $domain = substr($host, $pos+1);
     }
     
-    // DEFAULT VALUES fÃ¼r protocol, path, port etc. (wenn noch nicht gesetzt)
+    // DEFAULT VALUES für protocol, path, port etc. (wenn noch nicht gesetzt)
       
     // Wenn Protokoll leer -> Protokoll ist "http://"
     if ($protocol == "") $protocol="http://";
     
     // Wenn Port leer -> Port setzen auf 80 or 443
-    // (abhÃ¤ngig vom Protokoll)
+    // (abhängig vom Protokoll)
     if ($port == "")
     {
       if (strtolower($protocol) == "http://") $port=80;
@@ -90,7 +90,7 @@ class PHPCrawlerUtils
     // Wenn Pfad leet -> Pfad ist "/"
     if ($path=="") $path = "/";
     
-    // RÃ¼ckgabe-Array
+    // Rückgabe-Array
     $url_parts["protocol"] = $protocol;
     $url_parts["host"] = $host;
     $url_parts["path"] = $path;
@@ -505,7 +505,7 @@ class PHPCrawlerUtils
   {
     $args = func_get_args();
     
-    // FÃ¼r jedes zu sortierende Feld ein eigenes Array bilden
+    // Für jedes zu sortierende Feld ein eigenes Array bilden
     @reset($array);
     while (list($field) = @each($array)) 
     {
@@ -521,7 +521,7 @@ class PHPCrawlerUtils
       }
     }
 
-    // Argumente fÃ¼r array_multisort bilden
+    // Argumente für array_multisort bilden
     for ($x=1; $x<count($args); $x++)
     {
       if (is_string($args[$x]))
@@ -585,6 +585,25 @@ class PHPCrawlerUtils
   }
   
   /**
+   * Checks wether the given string is an UTF8-encoded string.
+   *
+   * Taken from http://www.php.net/manual/de/function.mb-detect-encoding.php
+   * (comment from "prgss at bk dot ru")
+   * 
+   * @param string $string The string
+   * @return bool TRUE if the string is UTF-8 encoded.
+   */
+  public static function isUTF8String($string)
+  { 
+    $sample = @iconv('utf-8', 'utf-8', $string);
+    
+    if (md5($sample) == md5($string))
+      return true;
+    else
+      return false;
+  }
+  
+  /**
    * Checks whether the given string is a valid, urlencoded URL (by RFC)
    * 
    * @param string $string The string
@@ -595,6 +614,30 @@ class PHPCrawlerUtils
     if (preg_match("#^[a-z0-9/.&=?%-_.!~*'()]+$# i", $string)) return true;
     else return false;
   }
+  
+    /**
+   * Decodes GZIP-encoded HTTP-data
+   */
+  public static function decodeGZipContent($content)
+  {
+    return gzinflate(substr($content, 10, -8));
+  }
+  
+  /**
+   * Checks whether the given data is gzip-encoded
+   */
+  public static function isGzipEncoded($content)
+  {
+		if(substr($content, 0, 3) == "\x1f\x8b\x08")
+		{
+		  return true;
+		}
+		else
+		{
+		  return false;
+		}
+	  }
+	}
   
   /**
    * Gets the content from the given file or URL
