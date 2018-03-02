@@ -117,17 +117,21 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
     $this->createPreparedInsertStatement();
                                                                     
     // Insert URL via prepared statement
-    $this->PreparedInsertStatement->execute(array(":priority_level" => $priority_level,
-                                                  ":distinct_hash" => $map_key,
-                                                  ":link_raw" => $UrlDescriptor->link_raw,
-                                                  ":linkcode" => $UrlDescriptor->linkcode,
-                                                  ":linktext" => $UrlDescriptor->linktext,
-                                                  ":refering_url" => $UrlDescriptor->refering_url,
-                                                  ":url_rebuild" => $UrlDescriptor->url_rebuild,
-                                                  ":is_redirect_url" => $UrlDescriptor->is_redirect_url,
-                                                  ":url_link_depth" => $UrlDescriptor->url_link_depth));
+      try{
+          $this->PreparedInsertStatement->execute(array(":priority_level" => $priority_level,
+              ":distinct_hash" => $map_key,
+              ":link_raw" => $UrlDescriptor->link_raw,
+              ":linkcode" => $UrlDescriptor->linkcode,
+              ":linktext" => $UrlDescriptor->linktext,
+              ":refering_url" => $UrlDescriptor->refering_url,
+              ":url_rebuild" => $UrlDescriptor->url_rebuild,
+              ":is_redirect_url" => $UrlDescriptor->is_redirect_url,
+              ":url_link_depth" => $UrlDescriptor->url_link_depth));
+      } catch(ErrorException $e){
+          // supress exception
+      }
   }
-  
+
   /**
    * Adds an bunch of URLs to the url-cache
    *

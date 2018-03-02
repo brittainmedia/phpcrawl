@@ -173,7 +173,12 @@ class PHPCrawler
    * @var PHPCrawlerStatusHandler
    */
   protected $CrawlerStatusHandler = null;
-  
+
+    /**
+     * @var PHPCrawlerStatus
+     */
+  protected $crawlerStatus;
+
   /**
    * Multiprocess-mode the crawler is runnung in.
    *
@@ -326,7 +331,10 @@ class PHPCrawler
     // Setup PHPCrawlerStatusHandler
     $this->CrawlerStatusHandler = new PHPCrawlerStatusHandler($this->crawler_uniqid, $this->working_directory);
     $this->setupCrawlerStatusHandler();
-    
+
+    // Set inital crawler status
+    $this->crawlerStatus = new PHPCrawlerStatus();
+
     // DocumentInfo-Queue
     if ($this->multiprocess_mode == PHPCrawlerMultiProcessModes::MPMODE_PARENT_EXECUTES_USERCODE)
       $this->DocumentInfoQueue = new PHPCrawlerDocumentInfoQueue($this->working_directory."doc_queue.db3", true);
@@ -924,7 +932,7 @@ class PHPCrawler
   { 
     // Get current crawler-Status
     $CrawlerStatus = $this->crawlerStatus;
-    
+
     // Create report
     $Report = new PHPCrawlerProcessReport();
     
