@@ -6,5 +6,5 @@
         "psr-4": {
             "PHPCrawl\\": "libs/"
         }
-    },
+    }
 }
