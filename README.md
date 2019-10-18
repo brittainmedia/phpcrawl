@@ -10,6 +10,6 @@ Initially just a copy of http://phpcrawl.cuab.de/ forked from [mmerian](https://
 - Introduced namespaces
 - Lots of bug fixes
 - Refactored various class sections
-- Preperation for Windows OS multiprocess mode (pthreads or paralell extension)
+- Preperation for Windows OS multiprocess mode ([pthreads](https://www.php.net/manual/en/book.pthreads.php) or [parallel](https://www.php.net/manual/en/book.parallel.php) extension)
 
 [Pull requests](https://github.com/crispy-computing-machine/phpcrawl/pulls) are welcome
