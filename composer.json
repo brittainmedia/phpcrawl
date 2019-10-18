@@ -1,10 +1,10 @@
 {
-	"name": "brittainmedia/phpcrawl",
-	"description": "PHPCrawl is a webcrawler/webspider-library written in PHP. It supports filters, limiters, cookie-handling, robots.txt-handling, multiprocessing and much more.",
-	"license": "GPL-2.0",
-	"autoload": {
-        "psr-4": {
-            "PHPCrawl\\": "libs/"
-        }
+  "name": "brittainmedia/phpcrawl",
+  "description": "PHPCrawl is a webcrawler/webspider-library written in PHP. It supports filters, limiters, cookie-handling, robots.txt-handling, multiprocessing and much more.",
+  "license": "GPL-2.0",
+  "autoload": {
+    "psr-4": {
+      "PHPCrawl\\": "libs/"
     }
+  }
 }

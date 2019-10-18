@@ -1,5 +1,12 @@
 <?php
+
 namespace PHPCrawl\Utils;
+
+use Exception;
+use PHPCrawl\PHPCrawlerCookieDescriptor;
+use PHPCrawl\PHPCrawlerHTTPRequest;
+use PHPCrawl\PHPCrawlerURLDescriptor;
+use PHPCrawl\PHPCrawlerUrlPartsDescriptor;
 
 /**
  * Static util-methods used by phpcrawl.
@@ -9,6 +16,11 @@ namespace PHPCrawl\Utils;
  */
 class PHPCrawlerUtils
 {
+
+    public const OS_WINDOWS = 1;
+    public const OS_NIX = 2;
+    public const OS_OTHER = 3;
+
     /**
      * Splits an URL into its parts
      *
@@ -33,7 +45,7 @@ class PHPCrawlerUtils
             $url = "http://" . $url;
         }
 
-        $parts = @parse_url($url);
+        $parts = parse_url($url);
 
         if (!isset($parts)) {
             return null;
@@ -61,7 +73,7 @@ class PHPCrawlerUtils
 
         // The domainname from the host
         // Host: www.foo.com -> Domain: foo.com
-        $parts = @explode('.', $host);
+        $parts = explode('.', $host);
         if (count($parts) <= 2) {
             $domain = $host;
         } else if (preg_match('#^[0-9]+$#', str_replace('.', '', $host))) // IP
@@ -127,6 +139,7 @@ class PHPCrawlerUtils
      *                          (I.e. http://www.foo.com/path/ insetad of http://www.foo.com:80/path/)
      * @return string The URL
      *
+     * @throws Exception
      */
     public static function buildURLFromParts($url_parts, $normalize = false): string
     {
@@ -197,6 +210,7 @@ class PHPCrawlerUtils
      *
      * @param string $url
      * @return string OR NULL on failure
+     * @throws Exception
      */
     public static function normalizeURL($url): string
     {
@@ -213,15 +227,15 @@ class PHPCrawlerUtils
     /**
      * Checks whether a given RegEx-pattern is valid or not.
      *
+     * @param $pattern
      * @return bool
      */
     public static function checkRegexPattern($pattern): ?bool
     {
-        $check = @preg_match($pattern, 'anything'); // thats the easy way to check a pattern ;)
+        $check = preg_match($pattern, 'anything'); // thats the easy way to check a pattern ;)
         if (is_int($check) == false) {
             return false;
-        }
-        else {
+        } else {
             return true;
         }
     }
@@ -240,8 +254,7 @@ class PHPCrawlerUtils
 
         if (isset($match[0])) {
             return (int)trim($match[0]);
-        }
-        else {
+        } else {
             return null;
         }
     }
@@ -254,8 +267,9 @@ class PHPCrawlerUtils
      *
      * @return string The rebuild, full qualified and normilazed URL the link is leading to (i.e. "http://www.foo.com/page.htm"),
      *                or NULL if the link couldn't be rebuild correctly.
+     * @throws Exception
      */
-    public static function buildURLFromLink($link, PHPCrawlerUrlPartsDescriptor $BaseUrl): string
+    public static function buildURLFromLink($link, PHPCrawlerUrlPartsDescriptor $BaseUrl): ?string
     {
         $url_parts = $BaseUrl->toArray();
 
@@ -284,6 +298,7 @@ class PHPCrawlerUtils
         // 3. Link is an absolute Link with a given protocol and host (f.e. "http://..." or "android-app://...)
         // DO NOTHING
         elseif (preg_match("#^[a-z0-9-]{1,}(:\/\/)# i", $link)) {
+            // "silly assignment"
             $link = $link;
         } // 4. Link is stuff like "javascript: ..." or something
         elseif (preg_match("/^[a-zA-Z]{0,}:[^\/]{0,1}/", $link)) {
@@ -338,6 +353,7 @@ class PHPCrawlerUtils
     /**
      * Returns the base-URL specified in a meta-tag in the given HTML-source
      *
+     * @param $html_source
      * @return string The base-URL or NULL if not found.
      */
     public static function getBaseUrlFromMetaTag(&$html_source): ?string
@@ -355,6 +371,7 @@ class PHPCrawlerUtils
     /**
      * Returns the redirect-URL from the given HTML-header
      *
+     * @param $header
      * @return string The redirect-URL or NULL if not found.
      */
     public static function getRedirectURLFromHeader(&$header): ?string
@@ -444,6 +461,7 @@ class PHPCrawlerUtils
      *
      * @param string $url The URL, e.g. "www.foo.con/something/index.html"
      * @return string The root-URL, e.g. "http://www.foo.com"
+     * @throws Exception
      */
     public static function getRootUrl($url): string
     {
@@ -455,6 +473,7 @@ class PHPCrawlerUtils
 
     /**
      * Deletes a directory recursivly
+     * @param $dir
      */
     public static function rmDir($dir): void
     {
@@ -464,8 +483,7 @@ class PHPCrawlerUtils
                 if ($object !== '.' && $object !== '..') {
                     if (filetype($dir . DIRECTORY_SEPARATOR . $object) === 'dir') {
                         self::rmDir($dir . DIRECTORY_SEPARATOR . $object);
-                    }
-                    else {
+                    } else {
                         unlink($dir . DIRECTORY_SEPARATOR . $object);
                     }
                 }
@@ -478,6 +496,8 @@ class PHPCrawlerUtils
 
     /**
      * Serializes data (objects, arrays etc.) and writes it to the given file.
+     * @param $target_file
+     * @param $data
      */
     public static function serializeToFile($target_file, $data): void
     {
@@ -504,14 +524,15 @@ class PHPCrawlerUtils
 
     /**
      * Sorts a twodimensiolnal array.
+     * @param $array
+     * @param $sort_args
      */
     public static function sort2dArray(&$array, $sort_args): void
     {
         $args = func_get_args();
 
         // F?r jedes zu sortierende Feld ein eigenes Array bilden
-        @reset($array);
-        while (list($field) = @each($array)) {
+        foreach ($array as $fieldKey => $field) {
             for ($x = 1, $xMax = count($args); $x < $xMax; $x++) {
                 // Ist das Argument ein String, sprich ein Sortier-Feld?
                 if (is_string($args[$x])) {
@@ -539,7 +560,6 @@ class PHPCrawlerUtils
         // Array sortieren
         array_multisort(...$params);
 
-        @reset($array);
     }
 
     /**
@@ -591,12 +611,11 @@ class PHPCrawlerUtils
      */
     public static function isUTF8String($string): ?bool
     {
-        $sample = @iconv('utf-8', 'utf-8', $string);
+        $sample = iconv('utf-8', 'utf-8', $string);
 
         if (md5($sample) == md5($string)) {
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -611,14 +630,15 @@ class PHPCrawlerUtils
     {
         if (preg_match("#^[a-z0-9/.&=?%-_.!~*'()]+$# i", $string)) {
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
     /**
      * Decodes GZIP-encoded HTTP-data
+     * @param $content
+     * @return false|string
      */
     public static function decodeGZipContent($content)
     {
@@ -627,6 +647,8 @@ class PHPCrawlerUtils
 
     /**
      * Checks whether the given data is gzip-encoded
+     * @param $content
+     * @return bool|null
      */
     public static function isGzipEncoded($content): ?bool
     {
@@ -645,6 +667,8 @@ class PHPCrawlerUtils
      * @param string $request_user_agent_string The UrserAgent-string to use for URL-requests
      * @param bool $throw_exception If set to true, an exception will get thrown in case of an IO-error
      * @return string The content of thr URI or NULL if the content couldn't be read
+     * @throws Exception
+     * @throws Exception
      */
     public static function getURIContent($uri, $request_user_agent_string = null, $throw_exception = false): string
     {
@@ -658,8 +682,7 @@ class PHPCrawlerUtils
 
             if (file_exists($file) && is_readable($file)) {
                 return file_get_contents($file);
-            }
-            else {
+            } else {
                 $error_str = "Error reading from file '" . $file . "'";
             }
         } // If protocol is "http" or "https"
@@ -676,8 +699,7 @@ class PHPCrawlerUtils
 
             if ($DocInfo->received == true) {
                 return $DocInfo->source;
-            }
-            else {
+            } else {
                 $error_str = "Error reading from URL '" . $uri . "'";
             }
         } // if protocol is not supported
@@ -691,6 +713,22 @@ class PHPCrawlerUtils
         }
 
         return null;
+    }
+
+    /**
+     * @return int
+     */
+    public static function getOS(): int
+    {
+        $os = strtoupper(PHP_OS);
+        if (substr($os, 0, 3) === 'WIN') {
+            return self::OS_WINDOWS;
+        }
+
+        if ($os === 'LINUX' || $os === 'FREEBSD' || $os === 'DARWIN') {
+            return self::OS_NIX;
+        }
+        return self::OS_OTHER;
     }
 }
 

@@ -1,5 +1,8 @@
 <?php
+
 namespace PHPCrawl\UrlCache;
+
+use PHPCrawl\PHPCrawlerURLDescriptor;
 
 /**
  * Class for caching/storing URLs/links in memory.
@@ -9,169 +12,170 @@ namespace PHPCrawl\UrlCache;
  */
 class PHPCrawlerMemoryURLCache extends PHPCrawlerURLCacheBase
 {
-  protected $urls = [];
-  protected $url_map = [];
-  
-  /**
-   * Returns the next URL from the cache that should be crawled.
-   *
-   * @return PhpCrawlerURLDescriptor
-   */
-  public function getNextUrl()
-  {
-    //PHPCrawlerBenchmark::start("getting_cached_url");
-    
-    $max_pri_lvl = $this->getMaxPriorityLevel();
-    
-    @reset($this->urls[$max_pri_lvl]);
-    while (list($key) = @each($this->urls[$max_pri_lvl]))
+    /**
+     * @var array
+     */
+    protected $urls = [];
+
+    /**
+     * @var array
+     */
+    protected $url_map = [];
+
+    /**
+     * Returns the next URL from the cache that should be crawled.
+     *
+     * @return PhpCrawlerURLDescriptor
+     */
+    public function getNextUrl()
     {
-      $UrlDescriptor_next = $this->urls[$max_pri_lvl][$key];
-      unset($this->urls[$max_pri_lvl][$key]);
-      break;
+        //PHPCrawlerBenchmark::start("getting_cached_url");
+
+        $max_pri_lvl = $this->getMaxPriorityLevel();
+
+        if (isset($this->urls[$max_pri_lvl])) {
+            foreach ($this->urls[$max_pri_lvl] as $key => $url) {
+                $UrlDescriptor_next = $this->urls[$max_pri_lvl][$key];
+                unset($this->urls[$max_pri_lvl][$key]);
+                break;
+            }
+        }
+
+        // If there's no URL in the priority-level-array left -> unset
+        if (count($this->urls[$max_pri_lvl]) == 0) {
+            unset($this->urls[$max_pri_lvl]);
+        }
+
+        //PHPCrawlerBenchmark::stop("getting_cached_url");
+
+        return $UrlDescriptor_next;
     }
-    
-    // If there's no URL in the priority-level-array left -> unset
-    if (count($this->urls[$max_pri_lvl]) == 0) {
-        unset($this->urls[$max_pri_lvl]);
-    }
-    
-    //PHPCrawlerBenchmark::stop("getting_cached_url");
-     
-    return $UrlDescriptor_next;
-  }
-  
-  /**
-   * Returns all URLs currently cached in the URL-cache.
-   *
-   * @return array Numeric array containing all URLs as PHPCrawlerURLDescriptor-objects
-   */
-  public function getAllURLs()
-  {
-    $URLs = [];
-    
-    @reset($this->urls);
-    while (list($pri_lvl) = @each($this->urls))
+
+    /**
+     * Returns all URLs currently cached in the URL-cache.
+     *
+     * @return array Numeric array containing all URLs as PHPCrawlerURLDescriptor-objects
+     */
+    public function getAllURLs()
     {
-      $cnt = count($this->urls[$pri_lvl]);
-      for ($x=0; $x<$cnt; $x++)
-      {
-        $URLs[] = &$this->urls[$pri_lvl][$x];
-      }
+        $URLs = [];
+
+        foreach ($this->urls as $pri_lvl => $pri_lvl_value) {
+            foreach ($this->urls[$pri_lvl] as $x => $xValue) {
+                $URLs[] = &$this->urls[$pri_lvl][$x];
+            }
+        }
+
+        return $URLs;
     }
-    
-    return $URLs;
-  }
-  
-  /**
-   * Removes all URLs and all priority-rules from the URL-cache.
-   */
-  public function clear()
-  {
-    $this->urls = [];
-    $this->url_map = [];
-    $this->url_priorities = [];
-  }
-  
-  /**
-   * Adds an URL to the url-cache
-   *
-   * @param PHPCrawlerURLDescriptor $UrlDescriptor      
-   */
-  public function addURL(PHPCrawlerURLDescriptor $UrlDescriptor)
-  { 
-    if ($UrlDescriptor == null) {
-        return;
-    }
-    
-    // Hash of the URL
-    $map_key = $this->getDistinctURLHash($UrlDescriptor);
-    
-    // If URL already in cache -> abort
-    if($map_key != null && isset($this->url_map[$map_key])) {
-        return;
-    }
-    
-    // Retrieve priority-level
-    $priority_level = $this->getUrlPriority($UrlDescriptor->url_rebuild);
-    
-    // Add URL to URL-Array
-    $this->urls[$priority_level][] = $UrlDescriptor;
-    
-    // Add URL to URL-Map
-    if ($this->url_distinct_property != self::URLHASH_NONE) {
-        $this->url_map[$map_key] = true;
-    }
-  }
-  
-  /**
-   * Adds an bunch of URLs to the url-cache
-   *
-   * @param array $urls  A numeric array containing the URLs as PHPCrawlerURLDescriptor-objects
-   */
-  public function addURLs($urls)
-  {
-    //PHPCrawlerBenchmark::start("caching_urls");
-    
-    $cnt = count($urls);
-    for ($x=0; $x<$cnt; $x++)
+
+    /**
+     * Removes all URLs and all priority-rules from the URL-cache.
+     */
+    public function clear()
     {
-      if ($urls[$x] != null)
-      {
-        $this->addURL($urls[$x]);
-      }
+        $this->urls = [];
+        $this->url_map = [];
+        $this->url_priorities = [];
     }
-    
-    //PHPCrawlerBenchmark::stop("caching_urls");
-  }
-  
-  /**
-   * Checks whether there are URLs left in the cache or not.
-   *
-   * @return bool
-   */
-  public function containsURLs()
-  {
-    if (count($this->urls) == 0) {
-        return false;
+
+    /**
+     * Adds an URL to the url-cache
+     *
+     * @param PHPCrawlerURLDescriptor $UrlDescriptor
+     */
+    public function addURL(PHPCrawlerURLDescriptor $UrlDescriptor)
+    {
+        if ($UrlDescriptor == null) {
+            return;
+        }
+
+        // Hash of the URL
+        $map_key = $this->getDistinctURLHash($UrlDescriptor);
+
+        // If URL already in cache -> abort
+        if ($map_key != null && isset($this->url_map[$map_key])) {
+            return;
+        }
+
+        // Retrieve priority-level
+        $priority_level = $this->getUrlPriority($UrlDescriptor->url_rebuild);
+
+        // Add URL to URL-Array
+        $this->urls[$priority_level][] = $UrlDescriptor;
+
+        // Add URL to URL-Map
+        if ($this->url_distinct_property != self::URLHASH_NONE) {
+            $this->url_map[$map_key] = true;
+        }
     }
-    else {
-        return true;
+
+    /**
+     * Adds an bunch of URLs to the url-cache
+     *
+     * @param array $urls A numeric array containing the URLs as PHPCrawlerURLDescriptor-objects
+     */
+    public function addURLs($urls)
+    {
+        //PHPCrawlerBenchmark::start("caching_urls");
+
+        $cnt = count($urls);
+        for ($x = 0; $x < $cnt; $x++) {
+            if ($urls[$x] != null) {
+                $this->addURL($urls[$x]);
+            }
+        }
+
+        //PHPCrawlerBenchmark::stop("caching_urls");
     }
-  }
-  
-  /**
-   * Cleans up the cache after is it not needed anymore.
-   */
-  public function cleanup()
-  {
-    $this->urls = [];
-    $this->url_map = [];
-  }
-  
-  /**
-   * Has no function in this class.
-   */
-  public function purgeCache()
-  {
-  }
-  
-  /**
-   * Has no function in this memory-cache.
-   */
-  public function markUrlAsFollowed(PHPCrawlerURLDescriptor $UrlDescriptor)
-  {
-  }
-  
-  /**
-   * Returns the highest priority-level an URL exists in cache for.
-   *
-   * @return int
-   */
-  protected function getMaxPriorityLevel(): int
-  {
-    $defined_priority_levels = array_keys($this->urls);
-    rsort($defined_priority_levels);
-    return $defined_priority_levels[0];
-  }
+
+    /**
+     * Checks whether there are URLs left in the cache or not.
+     *
+     * @return bool
+     */
+    public function containsURLs()
+    {
+        if (count($this->urls) == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * Cleans up the cache after is it not needed anymore.
+     */
+    public function cleanup()
+    {
+        $this->urls = [];
+        $this->url_map = [];
+    }
+
+    /**
+     * Has no function in this class.
+     */
+    public function purgeCache()
+    {
+    }
+
+    /**
+     * Has no function in this memory-cache.
+     * @param PHPCrawlerURLDescriptor $UrlDescriptor
+     */
+    public function markUrlAsFollowed(PHPCrawlerURLDescriptor $UrlDescriptor)
+    {
+    }
+
+    /**
+     * Returns the highest priority-level an URL exists in cache for.
+     *
+     * @return int
+     */
+    protected function getMaxPriorityLevel(): int
+    {
+        $defined_priority_levels = array_keys($this->urls);
+        rsort($defined_priority_levels);
+        return $defined_priority_levels[0];
+    }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace PHPCrawl\Enums;
 
 /**
@@ -8,13 +9,13 @@ namespace PHPCrawl\Enums;
  */
 class PHPCrawlerUrlCacheTypes
 {
-  /**
-   * URLs get cached in local RAM. Best performance.
-   */
-  public const URLCACHE_MEMORY = 1;
-  
-  /**
-   * URLs get cached in a SQLite-database-file. Recommended for spidering huge websites.
-   */
-  public const URLCACHE_SQLITE = 2;
+    /**
+     * URLs get cached in local RAM. Best performance.
+     */
+    public const URLCACHE_MEMORY = 1;
+
+    /**
+     * URLs get cached in a SQLite-database-file. Recommended for spidering huge websites.
+     */
+    public const URLCACHE_SQLITE = 2;
 }

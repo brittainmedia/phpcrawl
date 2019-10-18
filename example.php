@@ -2,45 +2,54 @@
 
 
 // It may take a whils to crawl a site ...
+use PHPCrawl\PHPCrawler;
+use PHPCrawl\PHPCrawlerDocumentInfo;
+
 set_time_limit(10000);
 
 // Inculde the phpcrawl-mainclass
 include('libs/PHPCrawler.php');
 
 // Extend the class and override the handleDocumentInfo()-method 
-class MyCrawler extends PHPCrawler 
-{
-  public function handleDocumentInfo($DocInfo)
-  {
-    // Just detect linebreak for output ("\n" in CLI-mode, otherwise "<br>")..
-    if (PHP_SAPI === 'cli') {
-        $lb = "\n";
-    }
-    else {
-        $lb = "<br />";
-    }
 
-    // Print the URL and the HTTP-status-Code
-    echo 'Page requested: ' .$DocInfo->url. ' (' .$DocInfo->http_status_code. ')' .$lb;
-    
-    // Print the refering URL
-    echo 'Referer-page: ' .$DocInfo->referer_url.$lb;
-    
-    // Print if the content of the document was be recieved or not
-    if ($DocInfo->received == true) {
-        echo "Content received: " . $DocInfo->bytes_received . " bytes" . $lb;
+/**
+ * Class MyCrawler
+ */
+class MyCrawler extends PHPCrawler
+{
+    /**
+     * @param PHPCrawlerDocumentInfo $DocInfo
+     * @return int|void
+     */
+    public function handleDocumentInfo($DocInfo)
+    {
+        // Just detect linebreak for output ("\n" in CLI-mode, otherwise "<br>")..
+        if (PHP_SAPI === 'cli') {
+            $lb = "\n";
+        } else {
+            $lb = "<br />";
+        }
+
+        // Print the URL and the HTTP-status-Code
+        echo 'Page requested: ' . $DocInfo->url . ' (' . $DocInfo->http_status_code . ')' . $lb;
+
+        // Print the refering URL
+        echo 'Referer-page: ' . $DocInfo->referer_url . $lb;
+
+        // Print if the content of the document was be recieved or not
+        if ($DocInfo->received == true) {
+            echo "Content received: " . $DocInfo->bytes_received . " bytes" . $lb;
+        } else {
+            echo "Content not received" . $lb;
+        }
+
+        // Now you should do something with the content of the actual
+        // received page or file ($DocInfo->source), we skip it in this example
+
+        echo $lb;
+
+        flush();
     }
-    else {
-        echo "Content not received" . $lb;
-    }
-    
-    // Now you should do something with the content of the actual
-    // received page or file ($DocInfo->source), we skip it in this example 
-    
-    echo $lb;
-    
-    flush();
-  } 
 }
 
 // Now, create a instance of your class, define the behaviour
@@ -74,13 +83,12 @@ $report = $crawler->getProcessReport();
 
 if (PHP_SAPI === 'cli') {
     $lb = "\n";
-}
-else {
+} else {
     $lb = "<br />";
 }
-    
-echo 'Summary:' .$lb;
-echo 'Links followed: ' .$report->links_followed.$lb;
-echo 'Documents received: ' .$report->files_received.$lb;
-echo 'Bytes received: ' .$report->bytes_received. ' bytes' .$lb;
-echo 'Process runtime: ' .$report->process_runtime. ' sec' .$lb;
+
+echo 'Summary:' . $lb;
+echo 'Links followed: ' . $report->links_followed . $lb;
+echo 'Documents received: ' . $report->files_received . $lb;
+echo 'Bytes received: ' . $report->bytes_received . ' bytes' . $lb;
+echo 'Process runtime: ' . $report->process_runtime . ' sec' . $lb;

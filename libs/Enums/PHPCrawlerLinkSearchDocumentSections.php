@@ -1,4 +1,5 @@
 <?php
+
 namespace PHPCrawl\Enums;
 
 /**
@@ -8,23 +9,23 @@ namespace PHPCrawl\Enums;
  */
 class PHPCrawlerLinkSearchDocumentSections
 {
-  /**
-   * Script-parts of html-documents (<script>...</script>)
-   */
-  public const SCRIPT_SECTIONS = 1;
-  
-  /**
-   * HTML-comments of html-documents (<!-->...<-->)
-   */
-  public const HTML_COMMENT_SECTIONS = 2;
-  
-  /**
-   * Javascript-triggering attributes like onClick, onMouseOver etc.
-   */
-  public const JS_TRIGGERING_SECTIONS = 4;
-  
-  /**
-   * All of the listed sections
-   */
-  public const ALL_SPECIAL_SECTIONS = 7;
+    /**
+     * Script-parts of html-documents (<script>...</script>)
+     */
+    public const SCRIPT_SECTIONS = 1;
+
+    /**
+     * HTML-comments of html-documents (<!-->...<-->)
+     */
+    public const HTML_COMMENT_SECTIONS = 2;
+
+    /**
+     * Javascript-triggering attributes like onClick, onMouseOver etc.
+     */
+    public const JS_TRIGGERING_SECTIONS = 4;
+
+    /**
+     * All of the listed sections
+     */
+    public const ALL_SPECIAL_SECTIONS = 7;
 }
