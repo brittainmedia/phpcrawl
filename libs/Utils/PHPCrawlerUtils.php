@@ -282,16 +282,16 @@ class PHPCrawlerUtils
         // Cases
 
         // Strange link like "//foo.htm" -> make it to "http://foo.html"
-        if (substr($link, 0, 2) === '//') {
+        if (self::startsWith($link, '//')) {
             $link = 'http:' . $link;
         }
 
         // 1. relative link starts with "/" --> doc_root
         // "/index.html" -> "http://www.foo.com/index.html"
-        elseif ($link[0] === '/') {
+        elseif (self::startsWith($link, '/')) {
             $link = $url_parts['protocol'] . $url_parts['host'] . ':' . $url_parts['port'] . $link;
         } // 2. "./foo.htm" -> "foo.htm"
-        elseif (substr($link, 0, 2) === './') {
+        elseif (self::startsWith($link, './')) {
             $link = $url_parts['protocol'] . $url_parts['host'] . ':' . $url_parts['port'] . $url_parts['path'] . substr($link, 2);
         }
 
@@ -308,10 +308,10 @@ class PHPCrawlerUtils
         // 5. "../../foo.html" -> remove the last path from our actual path
         // and remove "../" from link at the same time until there are
         // no more "../" at the beginning of the link
-        elseif (substr($link, 0, 3) === '../') {
+        elseif (self::startsWith($link, '../')) {
             $new_path = $url_parts['path'];
 
-            while (substr($link, 0, 3) === '../') {
+            while (self::startsWith($link,'../')) {
                 $new_path = preg_replace('/\/[^\/]{0,}\/$/', '/', $new_path);
                 $link = substr($link, 3);
             }
@@ -321,10 +321,10 @@ class PHPCrawlerUtils
 
         // 6. link starts with #
         // -> leads to the same site as we are on, trash
-        elseif ($link[0] === '#') {
+        elseif (self::startsWith( $link,'#')) {
             $link = '';
         } // 7. link starts with "?"
-        elseif ($link[0] === '?') {
+        elseif (self::startsWith($link, '?')) {
             $link = $url_parts['protocol'] . $url_parts['host'] . ':' . $url_parts['port'] . $url_parts['path'] . $url_parts['file'] . $link;
         } // 7. thats it, else the abs_path is simply PATH.LINK ...
         else {
@@ -716,6 +716,8 @@ class PHPCrawlerUtils
     }
 
     /**
+     * Get current operating system
+     *
      * @return int
      */
     public static function getOS(): int
@@ -729,6 +731,19 @@ class PHPCrawlerUtils
             return self::OS_NIX;
         }
         return self::OS_OTHER;
+    }
+
+    /**
+     * Check if a string starts with something
+     *
+     * @param string $haystack
+     * @param string $needle
+     * @return bool
+     */
+    public static function startsWith(string $haystack, string $needle)
+    {
+        $length = strlen($needle);
+        return (substr($haystack, 0, $length) === $needle);
     }
 }
 
