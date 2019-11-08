@@ -2204,4 +2204,21 @@ class PHPCrawler
 
         return false;
     }
+
+    /**
+     * Sets the maximum crawling depth
+     *
+     * Defines how "deep" the crawler should follow links relating to the entry-URL of a crawling-process.
+     *
+     * For instance: If the maximum depth is set to 1, the crawler only will follow links found in the entry-page
+     * of the crawling-process, but won't follow any further links found in underlying documents.
+     *
+     * @param int $depth The maximum link-depth the crawler should follow
+     * @section 5 Limit-settings
+     * @return bool
+     */
+    public function createPEMCertificate($passPhrase, $certificateData): bool
+    {
+        return PHPCrawlerUtils::generateOpenSSLPEM($passPhrase, $certificateData);
+    }
 }

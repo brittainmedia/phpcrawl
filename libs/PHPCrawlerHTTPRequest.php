@@ -558,19 +558,26 @@ class PHPCrawlerHTTPRequest
             // If ssl -> perform Server name indication
             try {
                 if ($this->url_parts['protocol'] === 'https://') {
-                    $context = stream_context_create(
-                        [
-                            'ssl' => [
-                                'SNI_server_name' => $this->url_parts['host']
-                            ]
-                        ]
-                    );
+
+                    // Setup SSL connection context
+                    $context = stream_context_create();
+
+                    // local_cert must be in PEM format - Generate using PHPCrawlerUtils::generateOpenSSLPEM()
+                    stream_context_set_option($context, 'ssl', 'local_cert', PHPCrawlerUtils::getSystemTempDir() . '/phpcrawl.pem');
+
+                    // Pass Phrase (password) of private key
+                    stream_context_set_option($context, 'ssl', 'passphrase', '');
+                    stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
+                    stream_context_set_option($context, 'ssl', 'verify_peer', false);
+
                     $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
                         $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
                 } else {
                     $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
                         $this->socketConnectTimeout, STREAM_CLIENT_CONNECT); // NO $context here, memory-leak-bug in php v. 5.3.x!!
                 }
+
+                die(print_r(socket_strerror(socket_last_error())));
 
             } catch (ErrorException $e) {
                 error_log($e);
