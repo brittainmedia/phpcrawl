@@ -559,18 +559,17 @@ class PHPCrawlerHTTPRequest
             try {
                 if ($this->url_parts['protocol'] === 'https://') {
 
-                    // Setup SSL connection context
-                    $context = stream_context_create();
-
-                    // local_cert must be in PEM format - Generate using PHPCrawlerUtils::generateOpenSSLPEM()
-                    stream_context_set_option($context, 'ssl', 'local_cert', PHPCrawlerUtils::getSystemTempDir() . '/phpcrawl.pem');
-
-                    // Pass Phrase (password) of private key
-                    stream_context_set_option($context, 'ssl', 'passphrase', '');
-                    stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
-                    stream_context_set_option($context, 'ssl', 'verify_peer', false);
-
-                    $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
+                    // Setup SSL connection context - local_cert must be in PEM format - Generate using PHPCrawlerUtils::generateOpenSSLPEM()
+                    $context = stream_context_create([
+                        'ssl' => [
+                            'allow_self_signed' => true,
+                            'verify_peer' => false,
+                            'verify_peer_name' => false,
+                            'local_cert' => PHPCrawlerUtils::getSystemTempDir() . '/phpcrawl.pem',
+                            'passphrase' => '',
+                        ]
+                    ]);
+                    $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':443', $error_code, $error_str,
                         $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
                 } else {
                     $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,

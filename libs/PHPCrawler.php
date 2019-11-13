@@ -2217,8 +2217,8 @@ class PHPCrawler
      * @section 5 Limit-settings
      * @return bool
      */
-    public function createPEMCertificate($passPhrase, $certificateData): bool
+    public function createPEMCertificate($certificateData): bool
     {
-        return PHPCrawlerUtils::generateOpenSSLPEM($passPhrase, $certificateData);
+        return PHPCrawlerUtils::generateOpenSSLPEM($certificateData);
     }
 }

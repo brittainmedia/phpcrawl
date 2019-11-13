@@ -750,7 +750,7 @@ class PHPCrawlerUtils
      * @param string $passPhrase
      * @param array $certificateData
      */
-    public static function generateOpenSSLPEM(string $passPhrase = '', array $certificateData = array()){
+    public static function generateOpenSSLPEM(array $certificateData = array()){
 
         if(count($certificateData) == 0){
 
@@ -772,10 +772,9 @@ class PHPCrawlerUtils
         $certificate = openssl_csr_sign($certificate, null, $privateKey, 365);
 
         // Generate PEM file
-        $pem_passphrase = $passPhrase; // empty for no passphrase
         $pem = [];
         openssl_x509_export($certificate, $pem[0]);
-        openssl_pkey_export($privateKey, $pem[1], $pem_passphrase);
+        openssl_pkey_export($privateKey, $pem[1], '');
         $pem = implode($pem);
 
         // Save PEM file
