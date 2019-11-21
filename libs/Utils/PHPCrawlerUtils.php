@@ -311,7 +311,7 @@ class PHPCrawlerUtils
         elseif (self::startsWith($link, '../')) {
             $new_path = $url_parts['path'];
 
-            while (self::startsWith($link,'../')) {
+            while (self::startsWith($link, '../')) {
                 $new_path = preg_replace('/\/[^\/]{0,}\/$/', '/', $new_path);
                 $link = substr($link, 3);
             }
@@ -321,7 +321,7 @@ class PHPCrawlerUtils
 
         // 6. link starts with #
         // -> leads to the same site as we are on, trash
-        elseif (self::startsWith( $link,'#')) {
+        elseif (self::startsWith($link, '#')) {
             $link = '';
         } // 7. link starts with "?"
         elseif (self::startsWith($link, '?')) {
@@ -747,12 +747,16 @@ class PHPCrawlerUtils
     }
 
     /**
+     * @see: https://www.devdungeon.com/content/how-use-ssl-sockets-php
+     *
      * @param string $passPhrase
      * @param array $certificateData
+     * @return false|int
      */
-    public static function generateOpenSSLPEM(array $certificateData = array()){
+    public static function generateOpenSSLPEM(array $certificateData = array())
+    {
 
-        if(count($certificateData) == 0){
+        if (count($certificateData) == 0) {
 
             // https://www.php.net/manual/en/function.openssl-csr-new.php
             $certificateData = [
