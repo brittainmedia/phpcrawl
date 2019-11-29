@@ -1824,6 +1824,16 @@ class PHPCrawler
     }
 
     /**
+     * Set if certificates for ssl connections should be verified
+     * This should only be disabled in debug/local mode
+     * @param $verify bool
+     */
+    public function setCertificateVerify($verify): void
+    {
+        $this->PageRequest->setCertificateVerify($verify);
+    }
+
+    /**
      * Sets the timeout in seconds for connection tries to hosting webservers.
      *
      * If the the connection to a host can't be established within the given time, the

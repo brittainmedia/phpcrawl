@@ -192,6 +192,8 @@ class PHPCrawlerHTTPRequest
     protected $socket_read_buffer_size = 1024;
     protected $source_overlap_size = 1500;
 
+    protected $certificateVerify = true;
+
     public function __construct()
     {
         // Init LinkFinder
@@ -337,6 +339,16 @@ class PHPCrawlerHTTPRequest
     {
         $this->url_parts['auth_username'] = $username;
         $this->url_parts['auth_password'] = $password;
+    }
+
+    /**
+     * Set if certificates for ssl connections should be verified
+     * This should only be disabled in debug/local mode
+     * @param bool $verify
+     */
+    public function setCertificateVerify($verify = true): void
+    {
+        $this->certificateVerify = $verify;
     }
 
     /**
@@ -559,16 +571,26 @@ class PHPCrawlerHTTPRequest
             try {
                 if ($this->url_parts['protocol'] === 'https://') {
 
-                    // Setup SSL connection context - local_cert must be in PEM format - Generate using PHPCrawlerUtils::generateOpenSSLPEM()
-                    $context = stream_context_create([
-                        'ssl' => [
-                            'allow_self_signed' => true,
-                            'verify_peer' => false,
-                            'verify_peer_name' => false,
-                            'local_cert' => PHPCrawlerUtils::getSystemTempDir() . '/phpcrawl.pem',
-                            'passphrase' => '',
-                        ]
-                    ]);
+                    if($this->certificateVerify){
+                        // Setup SSL connection context
+                        // Use https://curl.haxx.se/ca/cacert.pem in root dir
+                        $pemFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'cacert.pem';
+                        $context = stream_context_create([
+                            "ssl"=> [
+                                "cafile" => $pemFile,
+                                "verify_peer"=> true,
+                                "verify_peer_name"=> true,
+                            ],
+                        ]);
+
+                    } else {
+                        $context = stream_context_create([
+                            "ssl"=> [
+                                "verify_peer"=> false,
+                                "verify_peer_name"=> false,
+                            ],
+                        ]);
+                    }
                     $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':443', $error_code, $error_str,
                         $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
                 } else {
@@ -576,7 +598,7 @@ class PHPCrawlerHTTPRequest
                         $this->socketConnectTimeout, STREAM_CLIENT_CONNECT); // NO $context here, memory-leak-bug in php v. 5.3.x!!
                 }
 
-                die(print_r(socket_strerror(socket_last_error())));
+                #die(print_r(socket_strerror(socket_last_error())));
 
             } catch (ErrorException $e) {
                 error_log($e);
