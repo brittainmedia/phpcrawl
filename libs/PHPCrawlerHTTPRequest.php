@@ -562,6 +562,15 @@ class PHPCrawlerHTTPRequest
         // Get IP for hostname
         $ip_address = $this->DNSCache->getIP($this->url_parts['host']);
 
+        // since PHP 5.6 SNI_server_name is deprecated
+        if (version_compare(PHP_VERSION, '5.6.0') >= 0)
+        {
+            $serverName = 'peer_name';
+        }
+        else
+        {
+            $serverName = 'SNI_server_name';
+        }
         // Open socket
         if ($this->proxy != null) {
             $this->socket = stream_socket_client($this->proxy['proxy_host'] . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
@@ -575,13 +584,22 @@ class PHPCrawlerHTTPRequest
                         // Setup SSL connection context
                         // Use https://curl.haxx.se/ca/cacert.pem in root dir
                         $pemFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'cacert.pem';
+
+                        /*
                         $context = stream_context_create([
                             "ssl"=> [
-                                "cafile" => $pemFile,
+                                "local_cert" => $pemFile,
                                 "verify_peer"=> true,
                                 "verify_peer_name"=> true,
                             ],
                         ]);
+                        */
+
+                        $context = stream_context_create(array(
+                            'ssl' => array(
+                                $serverName => $this->url_parts["host"],
+                            ),
+                        ));
 
                     } else {
                         $context = stream_context_create([
