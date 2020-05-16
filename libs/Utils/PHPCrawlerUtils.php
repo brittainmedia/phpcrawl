@@ -40,15 +40,15 @@ class PHPCrawlerUtils
      */
     public static function splitURL($url): array
     {
-        // Protokoll der URL hinzuf?gen (da ansonsten parse_url nicht klarkommt)
+        // Add protocol to the URL (otherwise parse_url will not work)
         if (!preg_match('#^[a-z0-9-]+://# i', $url)) {
             $url = "http://" . $url;
         }
 
         $parts = parse_url($url);
 
-        if (!isset($parts)) {
-            return null;
+        if ($parts == false || !isset($parts)) {
+            throw new Exception('PHPCrawlerUtils::splitURL Failed to parse url: ' . $url);
         }
 
         $protocol = $parts['scheme'] . '://';
@@ -63,7 +63,7 @@ class PHPCrawlerUtils
         $host = strtolower($host);
 
         // File
-        preg_match('#^(.*/)([^/]*)$#', $path, $match); // Alles ab dem letzten "/"
+        preg_match('#^(.*/)([^/]*)$#', $path, $match); // Everything from the last one "/"
         if (isset($match[0])) {
             $file = trim($match[2]);
             $path = trim($match[1]);
@@ -84,15 +84,15 @@ class PHPCrawlerUtils
             $domain = substr($host, $pos + 1);
         }
 
-        // DEFAULT VALUES f?r protocol, path, port etc. (wenn noch nicht gesetzt)
+        // DEFAULT VALUES for protocol, path, port etc. (if not set yet)
 
-        // Wenn Protokoll leer -> Protokoll ist "http://"
+        // If protocol is empty -> protocol is "http: //"
         if ($protocol == '') {
             $protocol = "http://";
         }
 
-        // Wenn Port leer -> Port setzen auf 80 or 443
-        // (abh?ngig vom Protokoll)
+        // If port is empty -> set port to 80 or 443
+        // (depending on the protocol)
         if ($port == '') {
             if (strtolower($protocol) === 'http://') {
                 $port = 80;
@@ -102,12 +102,12 @@ class PHPCrawlerUtils
             }
         }
 
-        // Wenn Pfad leet -> Pfad ist "/"
+        // if path is empty -> path is "/"
         if ($path == '') {
             $path = "/";
         }
 
-        // R?ckgabe-Array
+        // build array
         $url_parts['protocol'] = $protocol;
         $url_parts['host'] = $host;
         $url_parts['path'] = $path;
@@ -332,6 +332,14 @@ class PHPCrawlerUtils
         }
 
         if ($link == '') {
+            return null;
+        }
+
+        if ($link == 'http://') {
+            return null;
+        }
+
+        if ($link == 'https://') {
             return null;
         }
 
