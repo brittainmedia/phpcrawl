@@ -6,6 +6,7 @@ use Exception;
 use PDO;
 use PDOStatement;
 use PHPCrawl\PHPCrawlerDocumentInfo;
+use RuntimeException;
 
 /**
  * Queue for PHPCrawlerDocumentInfo-objects
@@ -28,17 +29,17 @@ class PHPCrawlerDocumentInfoQueue
      * Prepared statement for inserting PHPCrawlerDocumentInfo-objects
      * @var PDOStatement
      */
-    protected $preparedInsertStatement;
+    protected PDOStatement $preparedInsertStatement;
 
     /**
      * Prepared statement for selecting/fetching PHPCrawlerDocumentInfo-objects
      * @var PDOStatement
      */
-    protected $preparedSelectStatement;
+    protected PDOStatement $preparedSelectStatement;
 
-    protected $working_directory;
+    protected string $working_directory;
 
-    protected $queue_max_size = 50;
+    protected int $queue_max_size = 50;
 
     /**
      * Initiates a PHPCrawlerDocumentInfoQueue
@@ -107,9 +108,7 @@ class PHPCrawlerDocumentInfoQueue
 
         $this->PDO->exec('DELETE FROM document_infos WHERE id = ' . $id . ';');
 
-        $DocInfo = unserialize($doc_info);
-
-        return $DocInfo;
+        return unserialize($doc_info);
     }
 
     /**
@@ -137,7 +136,7 @@ class PHPCrawlerDocumentInfoQueue
         try {
             $this->PDO = new PDO('sqlite:' . $this->sqlite_db_file);
         } catch (Exception $e) {
-            throw new Exception('Error creating SQLite-cache-file, ' . $e->getMessage() . ', try installing sqlite3-extension for PHP.');
+            throw new RuntimeException('Error creating SQLite-cache-file, ' . $e->getMessage() . ', try installing sqlite3-extension for PHP.');
         }
 
         $this->PDO->exec('PRAGMA journal_mode = OFF');

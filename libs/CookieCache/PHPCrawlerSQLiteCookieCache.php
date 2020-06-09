@@ -8,6 +8,7 @@ use PDOException;
 use PHPCrawl\PHPCrawlerBenchmark;
 use PHPCrawl\PHPCrawlerCookieDescriptor;
 use PHPCrawl\Utils\PHPCrawlerUtils;
+use RuntimeException;
 
 /**
  * Class for storing/caching cookies in a SQLite-db-file.
@@ -72,8 +73,8 @@ class PHPCrawlerSQLiteCookieCache extends PHPCrawlerCookieCacheBase
 
         $this->PDO->exec('BEGIN EXCLUSIVE TRANSACTION');
 
-        for ($x = 0, $xMax = count($cookies); $x < $xMax; $x++) {
-            $this->addCookie($cookies[$x]);
+        foreach ($cookies as $xValue) {
+            $this->addCookie($xValue);
         }
 
         $this->PDO->exec('COMMIT');
@@ -99,15 +100,14 @@ class PHPCrawlerSQLiteCookieCache extends PHPCrawlerCookieCacheBase
         $rows = $Result->fetchAll(PDO::FETCH_ASSOC);
         $Result->closeCursor();
 
-        $cnt = count($rows);
-        for ($x = 0; $x < $cnt; $x++) {
+        foreach ($rows as $xValue) {
             // Does the cookie-domain match?
             // Tail-matching, see http://curl.haxx.se/rfc/cookie_spec.html:
             // A domain attribute of "acme.com" would match host names "anvil.acme.com" as well as "shipping.crate.acme.com"
-            if ($rows[$x]['domain'] == $url_parts['host'] || preg_match('#' . preg_quote($rows[$x]['domain']) . '$#', $url_parts['host'])) {
+            if ($xValue['domain'] == $url_parts['host'] || preg_match('#' . preg_quote($xValue['domain']) . '$#', $url_parts['host'])) {
                 // Does the path match?
-                if (preg_match('#^' . preg_quote($rows[$x]['path']) . '#', $url_parts['path'])) {
-                    $Cookie = new PHPCrawlerCookieDescriptor($rows[$x]['source_url'], $rows[$x]['name'], $rows[$x]['value'], $rows[$x]['expires'], $rows[$x]['path'], $rows[$x]['domain']);
+                if (preg_match('#^' . preg_quote($xValue['path']) . '#', $url_parts['path'])) {
+                    $Cookie = new PHPCrawlerCookieDescriptor($xValue['source_url'], $xValue['name'], $xValue['value'], $xValue['expires'], $xValue['path'], $xValue['domain']);
                     $return_cookies[$Cookie->name] = $Cookie; // Use cookie-name as index to avoid double-cookies
                 }
             }
@@ -135,7 +135,7 @@ class PHPCrawlerSQLiteCookieCache extends PHPCrawlerCookieCacheBase
         try {
             $this->PDO = new PDO('sqlite:' . $this->sqlite_db_file);
         } catch (PDOException $e) {
-            throw new Exception('Error creating SQLite-cache-file, ' . $e->getMessage() . ', try installing sqlite3-extension for PHP.');
+            throw new RuntimeException('Error creating SQLite-cache-file, ' . $e->getMessage() . ', try installing sqlite3-extension for PHP.');
         }
 
         $this->PDO->exec('PRAGMA journal_mode = OFF');

@@ -60,7 +60,7 @@ class PHPCrawlerBenchmark
      * @param string  The benchmark name/identifier.
      * @return int The time elapsed since the last start() for this identifier
      */
-    public static function stop($identifier): int
+    public static function stop($identifier): ?int
     {
         if (isset(self::$benchmark_starttimes[$identifier])) {
             $elapsed_time = self::getmicrotime() - self::$benchmark_starttimes[$identifier];
@@ -85,9 +85,7 @@ class PHPCrawlerBenchmark
      */
     public static function getElapsedTime($identifier): ?float
     {
-        if (isset(self::$benchmark_results[$identifier])) {
-            return self::$benchmark_results[$identifier];
-        }
+        return self::$benchmark_results[$identifier] ?? 0.0;
     }
 
     /**

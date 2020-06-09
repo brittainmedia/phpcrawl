@@ -36,14 +36,14 @@ class PHPCrawlerResponseHeader
      *
      * @var string
      */
-    public $header_raw;
+    public string $header_raw;
 
     /**
      * The HTTP-statuscode
      *
      * @var int
      */
-    public $http_status_code;
+    public ?int $http_status_code;
 
     /**
      * The content-type
@@ -78,12 +78,12 @@ class PHPCrawlerResponseHeader
      *
      * @var array Numeric array containing all cookies as {@link PHPCrawlerCookieDescriptor}-objects
      */
-    public $cookies = [];
+    public array $cookies = [];
 
     /**
      * The URL of the website the header was recevied from.
      *
      * @var string
      */
-    public $source_url;
+    public string $source_url;
 }

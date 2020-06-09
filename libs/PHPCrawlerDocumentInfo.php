@@ -393,9 +393,8 @@ class PHPCrawlerDocumentInfo
      */
     public function setLinksFoundArray(): void
     {
-        $cnt = count($this->links_found_url_descriptors);
-        for ($x = 0; $x < $cnt; $x++) {
-            $UrlDescriptor = $this->links_found_url_descriptors[$x];
+        foreach ($this->links_found_url_descriptors as $xValue) {
+            $UrlDescriptor = $xValue;
 
             // Convert $UrlDescriptor-object to an array
             $object_vars = get_object_vars($UrlDescriptor);

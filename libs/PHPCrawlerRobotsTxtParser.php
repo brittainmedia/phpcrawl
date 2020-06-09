@@ -13,6 +13,11 @@ use PHPCrawl\Utils\PHPCrawlerUtils;
  */
 class PHPCrawlerRobotsTxtParser
 {
+    /**
+     * @var PHPCrawlerHTTPRequest
+     */
+    private $PageRequest;
+
     public function __construct()
     {
         // Init PageRequest-class
@@ -30,7 +35,6 @@ class PHPCrawlerRobotsTxtParser
      *
      * @return array Numeric array containing regular-expressions for each "disallow"-rule defined in the robots.txt-file
      *               that's adressed to the given user-agent.
-     * @throws Exception
      */
     public function parseRobotsTxt(PHPCrawlerURLDescriptor $BaseUrl, $user_agent_string, $robots_txt_uri = null): array
     {
@@ -68,7 +72,7 @@ class PHPCrawlerRobotsTxtParser
      * @param $user_agent_string
      * @return array Numeric array containing the lines
      */
-    protected function getUserAgentLines(&$robots_txt_content, $user_agent_string): array
+    protected function getUserAgentLines($robots_txt_content, $user_agent_string): array
     {
         // Split the content into its lines
         $robotstxt_lines = explode("\n", $robots_txt_content);
@@ -77,9 +81,8 @@ class PHPCrawlerRobotsTxtParser
         $current_user_agent = null;
 
         // Loop over the lines and check if any user-agent-sections match with our agent
-        $cnt = count($robotstxt_lines);
-        for ($x = 0; $x < $cnt; $x++) {
-            $line = trim($robotstxt_lines[$x]);
+        foreach ($robotstxt_lines as $xValue) {
+            $line = trim($xValue);
 
             if ($line == '') {
                 continue;
@@ -166,9 +169,7 @@ class PHPCrawlerRobotsTxtParser
     public static function getRobotsTxtURL($url): string
     {
         $url_parts = PHPCrawlerUtils::splitURL($url);
-        $robots_txt_url = $url_parts['protocol'] . $url_parts['host'] . ':' . $url_parts['port'] . '/robots.txt';
-
-        return $robots_txt_url;
+        return $url_parts['protocol'] . $url_parts['host'] . ':' . $url_parts['port'] . '/robots.txt';
     }
 }
-  
+

@@ -27,7 +27,6 @@ $certificateData = [
 	"commonName" => "Wez Furlong",
 	"emailAddress" => "wez@example.com"
 ];
-$crawler->createPEMCertificate($passPhrase, $certificateData);
 
 // Set the traffic-limit to 1 MB (in bytes,
 // for testing we dont want to "suck" the whole site)

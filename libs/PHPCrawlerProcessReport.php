@@ -87,7 +87,7 @@ class PHPCrawlerProcessReport
      * @var int One of the {@link PHPCrawlerAbortReasons}-constants
      * @section 1 General
      */
-    public $abort_reason;
+    public int $abort_reason;
 
     /**
      * The average server connect-time.

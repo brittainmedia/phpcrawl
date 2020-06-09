@@ -78,7 +78,7 @@ class PHPCrawlerLinkFinder
      *
      * @var int Bitwise combination of PHPCrawlerLinkSearchDocumentSections-constants
      */
-    protected $ignore_document_sections;
+    protected $ignore_document_sections = null;
 
     public function __construct()
     {
@@ -125,9 +125,8 @@ class PHPCrawlerLinkFinder
     /**
      * Checks for a redirect-URL in the given http-header and adds it to the internal link-cache.
      * @param $http_header
-     * @throws Exception
      */
-    protected function findRedirectLinkInHeader(&$http_header): void
+    protected function findRedirectLinkInHeader($http_header): void
     {
         PHPCrawlerBenchmark::start('checking_for_redirect_link');
 
@@ -182,8 +181,8 @@ class PHPCrawlerLinkFinder
         // This has to be done FIRST !!
         preg_match_all("#<\s*a\s[^<>]*(?<=\s)(?:" . $tag_regex_part . ")\s*=\s*" .
             "(?|\"([^\"]+)\"|'([^']+)'|([^\s><'\"]+))[^<>]*>" .
-            "((?:(?!<\s*\/a\s*>).){0,500})" .
-            "<\s*\/a\s*># is", $html_source, $matches);
+            "((?:(?!<\s*/a\s*>).){0,500})" .
+            "<\s*/a\s*># is", $html_source, $matches);
 
         $cnt = count($matches[0]);
         for ($x = 0; $x < $cnt; $x++) {
@@ -224,7 +223,7 @@ class PHPCrawlerLinkFinder
             // Everything like "...href=bla.html..." without qoutes
             $pregs[] = "/[\s\.:;](?:" . $tag_regex_part . ")\s*(=)\s*([^\s\">']{1,500})/ is";
 
-            for ($x = 0, $xMax = count($pregs); $x < $xMax; $x++) {
+            foreach ($pregs as $x => $xValue) {
                 unset($matches);
                 preg_match_all($pregs[$x], $html_source, $matches);
 
@@ -256,14 +255,14 @@ class PHPCrawlerLinkFinder
 
         // Replace <script>-sections from source, but only those without src in it.
         if ($this->ignore_document_sections & PHPCrawlerLinkSearchDocumentSections::SCRIPT_SECTIONS) {
-            $html_source = preg_replace("#<script(?:(?!src).)*>.*(?:<\/script>|$)# Uis", '', $html_source);
-            $html_source = preg_replace("#^(?:(?!<script).)*<\/script># Uis", '', $html_source);
+            $html_source = preg_replace("#<script(?:(?!src).)*>.*(?:</script>|$)# Uis", '', $html_source);
+            $html_source = preg_replace("#^(?:(?!<script).)*</script># Uis", '', $html_source);
         }
 
         // Replace HTML-comments from source
         if ($this->ignore_document_sections & PHPCrawlerLinkSearchDocumentSections::HTML_COMMENT_SECTIONS) {
-            $html_source = preg_replace("#<\!--.*(?:-->|$)# Uis", '', $html_source);
-            $html_source = preg_replace("#^(?:(?!<\!--).)*--># Uis", '', $html_source);
+            $html_source = preg_replace("#<!--.*(?:-->|$)# Uis", '', $html_source);
+            $html_source = preg_replace("#^(?:(?!<!--).)*--># Uis", '', $html_source);
         }
 
         // Replace javascript-triggering attributes
@@ -279,7 +278,6 @@ class PHPCrawlerLinkFinder
      * @param string $link_code The html-code of the link like it was found (i.e. <a href="the_link.html">Link</a>)
      * @param string $link_text The linktext like it was found
      * @param bool $is_redirect_url Flag indicatin whether the found URL is target of an HTTP-redirect
-     * @throws Exception
      */
     protected function addLinkToCache($link_raw, $link_code, $link_text = '', $is_redirect_url = false): void
     {

@@ -52,9 +52,9 @@ class PHPCrawlerUserSendDataCache
             }
 
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -68,10 +68,9 @@ class PHPCrawlerUserSendDataCache
     {
         $post_data_array = [];
 
-        $cnt = count($this->post_data);
-        for ($x = 0; $x < $cnt; $x++) {
-            if (preg_match($this->post_data[$x]['url_regex'], $url)) {
-                $post_data_array[$this->post_data[$x]['key']] = $this->post_data[$x]['value'];
+        foreach ($this->post_data as $x => $xValue) {
+            if (preg_match($xValue['url_regex'], $url)) {
+                $post_data_array[$xValue['key']] = $this->post_data[$x]['value'];
             }
         }
 
@@ -102,9 +101,9 @@ class PHPCrawlerUserSendDataCache
 
             $this->basic_authentications[] = $tmp;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -116,8 +115,8 @@ class PHPCrawlerUserSendDataCache
      */
     public function getBasicAuthenticationForUrl($url): ?array
     {
-        for ($x = 0, $xMax = count($this->basic_authentications); $x < $xMax; $x++) {
-            if (preg_match($this->basic_authentications[$x]['url_regex'], $url)) {
+        foreach ($this->basic_authentications as $x => $xValue) {
+            if (preg_match($xValue['url_regex'], $url)) {
                 $tmp = [];
                 $tmp['username'] = $this->basic_authentications[$x]['username'];
                 $tmp['password'] = $this->basic_authentications[$x]['password'];

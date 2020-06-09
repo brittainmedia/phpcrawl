@@ -39,8 +39,8 @@ class PHPCrawlerMemoryCookieCache extends PHPCrawlerCookieCacheBase
      */
     public function addCookies($cookies)
     {
-        for ($x = 0, $xMax = count($cookies); $x < $xMax; $x++) {
-            $this->addCookie($cookies[$x]);
+        foreach ($cookies as $xValue) {
+            $this->addCookie($xValue);
         }
     }
 

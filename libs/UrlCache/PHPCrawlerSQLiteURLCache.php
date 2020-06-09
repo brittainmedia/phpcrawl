@@ -8,6 +8,7 @@ use PDOException;
 use PDOStatement;
 use PHPCrawl\PHPCrawlerBenchmark;
 use PHPCrawl\PHPCrawlerURLDescriptor;
+use RuntimeException;
 
 /**
  * Class for caching/storing URLs/links in a SQLite-database-file.
@@ -132,16 +133,18 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
         $this->createPreparedInsertStatement();
 
         // Insert URL via prepared statement
-        $this->PreparedInsertStatement->execute([
-            ':priority_level' => $priority_level,
-            ':distinct_hash' => $map_key,
-            ':link_raw' => $UrlDescriptor->link_raw,
-            ':linkcode' => $UrlDescriptor->linkcode,
-            ':linktext' => $UrlDescriptor->linktext,
-            ':refering_url' => $UrlDescriptor->refering_url,
-            ':url_rebuild' => $UrlDescriptor->url_rebuild,
-            ':is_redirect_url' => $UrlDescriptor->is_redirect_url,
-            ':url_link_depth' => $UrlDescriptor->url_link_depth]);
+        if(isset($this->PreparedInsertStatement)){
+            $this->PreparedInsertStatement->execute([
+                ':priority_level' => $priority_level,
+                ':distinct_hash' => $map_key,
+                ':link_raw' => $UrlDescriptor->link_raw,
+                ':linkcode' => $UrlDescriptor->linkcode,
+                ':linktext' => $UrlDescriptor->linktext,
+                ':refering_url' => $UrlDescriptor->refering_url,
+                ':url_rebuild' => $UrlDescriptor->url_rebuild,
+                ':is_redirect_url' => $UrlDescriptor->is_redirect_url,
+                ':url_link_depth' => $UrlDescriptor->url_link_depth]);
+        }
     }
 
     /**
@@ -155,10 +158,9 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
 
         $this->PDO->exec('BEGIN EXCLUSIVE TRANSACTION;');
 
-        $cnt = count($urls);
-        for ($x = 0; $x < $cnt; $x++) {
-            if ($urls[$x] != null) {
-                $this->addURL($urls[$x]);
+        foreach ($urls as $x => $xValue) {
+            if ($xValue != null) {
+                $this->addURL($xValue);
             }
 
             // Commit after 1000 URLs (reduces memory-usage)
@@ -209,11 +211,7 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
 
         PHPCrawlerBenchmark::stop('checking_for_urls_in_cache');
 
-        if ($has_columns != false) {
-            return true;
-        } else {
-            return false;
-        }
+        return $has_columns != false;
     }
 
     /**
@@ -239,7 +237,7 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
         try {
             $this->PDO = new PDO('sqlite:' . $this->sqlite_db_file);
         } catch (PDOException $e) {
-            throw new Exception('Error creating SQLite-cache-file, ' . $e->getMessage() . ', try installing sqlite3-extension for PHP.');
+            throw new RuntimeException('Error creating SQLite-cache-file, ' . $e->getMessage() . ', try installing sqlite3-extension for PHP.');
         }
 
         $this->PDO->exec('PRAGMA journal_mode = OFF');
@@ -279,7 +277,7 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
      */
     protected function createPreparedInsertStatement(): void
     {
-        if ($this->PreparedInsertStatement == null) {
+        if (isset($this->PreparedInsertStatement) && $this->PreparedInsertStatement == null) {
             // Prepared statement for URL-inserts
             $this->PreparedInsertStatement = $this->PDO->prepare('INSERT OR IGNORE INTO urls (priority_level, distinct_hash, link_raw, linkcode, linktext, refering_url, url_rebuild, is_redirect_url, url_link_depth)
                                                             VALUES(:priority_level,
@@ -302,7 +300,6 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
         // Has to be done, otherwise sqlite-file is locked on Windows-OS
         $this->PDO = null;
         $this->PreparedInsertStatement = null;
-
         unlink($this->sqlite_db_file);
     }
 }

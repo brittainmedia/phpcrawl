@@ -119,10 +119,9 @@ class PHPCrawlerMemoryURLCache extends PHPCrawlerURLCacheBase
     {
         //PHPCrawlerBenchmark::start("caching_urls");
 
-        $cnt = count($urls);
-        for ($x = 0; $x < $cnt; $x++) {
-            if ($urls[$x] != null) {
-                $this->addURL($urls[$x]);
+        foreach ($urls as $xValue) {
+            if ($xValue != null) {
+                $this->addURL($xValue);
             }
         }
 
@@ -136,11 +135,7 @@ class PHPCrawlerMemoryURLCache extends PHPCrawlerURLCacheBase
      */
     public function containsURLs()
     {
-        if (count($this->urls) == 0) {
-            return false;
-        } else {
-            return true;
-        }
+        return !(count($this->urls) == 0);
     }
 
     /**

@@ -64,14 +64,14 @@ class PHPCrawlerURLFilter
      *
      * @var int
      */
-    public $max_crawling_depth;
+    public $max_crawling_depth = null;
 
     /**
      * Current PHPCrawlerDocumentInfo-object of the current document
      *
      * @var PHPCrawlerDocumentInfo
      */
-    protected $CurrentDocumentInfo;
+    protected $CurrentDocumentInfo = null;
 
     /**
      * Sets the base-URL of the crawling process some rules relate to
@@ -99,9 +99,8 @@ class PHPCrawlerURLFilter
 
         $filtered_urls = [];
 
-        $cnt = count($DocumentInfo->links_found_url_descriptors);
-        for ($x = 0; $x < $cnt; $x++) {
-            if (!$this->urlMatchesRules($DocumentInfo->links_found_url_descriptors[$x])) {
+        foreach ($DocumentInfo->links_found_url_descriptors as $x => $xValue) {
+            if (!$this->urlMatchesRules($xValue)) {
                 $DocumentInfo->links_found_url_descriptors[$x] = null;
             }
         }
@@ -119,13 +118,12 @@ class PHPCrawlerURLFilter
      */
     public static function keepRedirectUrls(PHPCrawlerDocumentInfo $DocumentInfo, $decrease_link_depths = false): void
     {
-        $cnt = count($DocumentInfo->links_found_url_descriptors);
-        for ($x = 0; $x < $cnt; $x++) {
-            if ($DocumentInfo->links_found_url_descriptors[$x]->is_redirect_url == false) {
+        foreach ($DocumentInfo->links_found_url_descriptors as $x => $xValue) {
+            if ($xValue->is_redirect_url == false) {
                 $DocumentInfo->links_found_url_descriptors[$x] = null;
             } else if ($decrease_link_depths == true) // Decrease linkdepths
             {
-                $DocumentInfo->links_found_url_descriptors[$x]->url_link_depth--;
+                $xValue->url_link_depth--;
             }
         }
     }
@@ -184,7 +182,7 @@ class PHPCrawlerURLFilter
         if ($this->general_follow_mode == 3) {
             if ($url_parts['protocol'] != $this->starting_url_parts['protocol'] ||
                 preg_replace("#^www\.#", '', $url_parts['host']) != preg_replace("#^www\.#", '', $this->starting_url_parts['host']) ||
-                substr($url_parts['path'], 0, strlen($this->starting_url_parts['path'])) != $this->starting_url_parts['path']) {
+                strpos($url_parts['path'], $this->starting_url_parts['path']) !== 0) {
                 return false;
             }
         }
@@ -249,9 +247,8 @@ class PHPCrawlerURLFilter
      */
     public function addURLFilterRules($regex_array): void
     {
-        $cnt = count($regex_array);
-        for ($x = 0; $x < $cnt; $x++) {
-            $this->addURLFilterRule($regex_array[$x]);
+        foreach ($regex_array as $xValue) {
+            $this->addURLFilterRule($xValue);
         }
     }
 }

@@ -31,7 +31,7 @@ class PHPCrawlerStatus
      * @var int One of the PHPCrawlerAbortReasons-contants or NULL if the process shouldn't
      *          get aborted yet.
      */
-    public $abort_reason;
+    public $abort_reason = null;
 
     public $first_content_url;
 

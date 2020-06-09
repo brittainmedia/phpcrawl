@@ -35,11 +35,10 @@ class PHPCrawlerDNSCache
         if (isset($this->host_ip_array[$hostname])) {
             return $this->host_ip_array[$hostname];
         } // Else do DNS-query
-        else {
-            $ip = gethostbyname($hostname);
-            $this->host_ip_array[$hostname] = $ip;
-            return $ip;
-        }
+
+        $ip = gethostbyname($hostname);
+        $this->host_ip_array[$hostname] = $ip;
+        return $ip;
     }
 
     /**
@@ -52,9 +51,9 @@ class PHPCrawlerDNSCache
     {
         if (isset($this->host_ip_array[$hostname])) {
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**

@@ -15,6 +15,10 @@ class PHPCrawlerProcessHandler
     protected $crawler_uniqid;
 
     protected $working_directory;
+    /**
+     * @var PHPCrawlerStatus
+     */
+    private $crawlerStatus;
 
     /**
      * Initiates a new PHPCrawlerProcessHandler-object.
@@ -83,8 +87,8 @@ class PHPCrawlerProcessHandler
     public function killChildProcesses(): void
     {
         $child_pids = $this->getChildPIDs();
-        for ($x = 0, $xMax = count($child_pids); $x < $xMax; $x++) {
-            posix_kill($child_pids[$x], SIGKILL);
+        foreach ($child_pids as $xValue) {
+            posix_kill($xValue, SIGKILL);
         }
     }
 
@@ -96,10 +100,9 @@ class PHPCrawlerProcessHandler
     public function childProcessAlive(): bool
     {
         $pids = $this->getChildPIDs();
-        $cnt = count($pids);
 
-        for ($x = 0; $x < $cnt; $x++) {
-            if (posix_getsid($pids[$x]) != false) {
+        foreach ($pids as $xValue) {
+            if (posix_getsid($xValue) != false) {
                 return true;
             }
         }

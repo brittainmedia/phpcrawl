@@ -93,7 +93,9 @@ abstract class PHPCrawlerURLCacheBase
     {
         if ($this->url_distinct_property == self::URLHASH_URL) {
             return md5($UrlDescriptor->url_rebuild);
-        } elseif ($this->url_distinct_property == self::URLHASH_RAWLINK) {
+        }
+
+        if ($this->url_distinct_property == self::URLHASH_RAWLINK) {
             return md5($UrlDescriptor->link_raw);
         } else {
             return null;
@@ -107,10 +109,9 @@ abstract class PHPCrawlerURLCacheBase
      */
     protected function getUrlPriority($url)
     {
-        $cnt = count($this->url_priorities);
-        for ($x = 0; $x < $cnt; $x++) {
-            if (preg_match($this->url_priorities[$x]['match'], $url)) {
-                return $this->url_priorities[$x]['level'];
+        foreach ($this->url_priorities as $xValue) {
+            if (preg_match($xValue['match'], $url)) {
+                return $xValue['level'];
             }
         }
 
@@ -140,8 +141,8 @@ abstract class PHPCrawlerURLCacheBase
      */
     public function addLinkPriorities($priority_array): void
     {
-        for ($x = 0, $xMax = count($priority_array); $x < $xMax; $x++) {
-            $this->addLinkPriority($priority_array[$x]['match'], $priority_array[$x]['level']);
+        foreach ($priority_array as $xValue) {
+            $this->addLinkPriority($xValue['match'], $xValue['level']);
         }
     }
 }

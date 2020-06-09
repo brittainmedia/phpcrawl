@@ -8,6 +8,7 @@ use PHPCrawl\Enums\PHPCrawlerHTTPProtocols;
 use PHPCrawl\Enums\PHPCrawlerRequestErrors;
 use PHPCrawl\Utils\PHPCrawlerEncodingUtils;
 use PHPCrawl\Utils\PHPCrawlerUtils;
+use RuntimeException;
 use function get_class;
 
 /**
@@ -211,8 +212,7 @@ class PHPCrawlerHTTPRequest
 
     /**
      * Sets the URL for the request.
-     *
-     * @param PHPCrawlerURLDescriptor $UrlDescriptor An PHPCrawlerURLDescriptor-object containing the URL to request
+     * @param PHPCrawlerURLDescriptor $UrlDescriptor
      */
     public function setUrl(PHPCrawlerURLDescriptor $UrlDescriptor): void
     {
@@ -250,9 +250,8 @@ class PHPCrawlerHTTPRequest
      */
     public function addCookieDescriptors($cookies): void
     {
-        $cnt = count($cookies);
-        for ($x = 0; $x < $cnt; $x++) {
-            $this->addCookieDescriptor($cookies[$x]);
+        foreach ($cookies as $xValue) {
+            $this->addCookieDescriptor($xValue);
         }
     }
 
@@ -371,7 +370,7 @@ class PHPCrawlerHTTPRequest
      * @param $obj
      * @param $method_name
      */
-    public function setHeaderCheckCallbackFunction(&$obj, $method_name): void
+    public function setHeaderCheckCallbackFunction($obj, $method_name): void
     {
         $this->header_check_callback_function = [$obj, $method_name];
     }
@@ -398,6 +397,8 @@ class PHPCrawlerHTTPRequest
         $PageInfo->query = $this->url_parts['query'];
         $PageInfo->port = $this->url_parts['port'];
         $PageInfo->url_link_depth = $this->UrlDescriptor->url_link_depth;
+        $PageInfo->error_code = 0;
+        $PageInfo->error_string = '';
 
         // Create header to send
         $request_header_lines = $this->buildRequestHeader();
@@ -409,10 +410,10 @@ class PHPCrawlerHTTPRequest
         $PageInfo->server_connect_time = $this->server_connect_time;
 
         // If error occured
-        if ($PageInfo->error_code != null) {
+        if (isset($PageInfo->error_code) && $PageInfo->error_code > 0) {
             // If proxy-error -> throw exception
-            if ($PageInfo->error_code == PHPCrawlerRequestErrors::ERROR_PROXY_UNREACHABLE) {
-                throw new Exception("Unable to connect to proxy '" . $this->proxy['proxy_host'] . "' on port '" . $this->proxy['proxy_port'] . "'");
+            if ($PageInfo->error_code == PHPCrawlerRequestPHPCrawlerLinkFinderErrors::ERROR_PROXY_UNREACHABLE) {
+                throw new RuntimeException("Unable to connect to proxy '" . $this->proxy['proxy_host'] . "' on port '" . $this->proxy['proxy_port'] . "'");
             }
 
             $PageInfo->error_occured = true;
@@ -427,7 +428,7 @@ class PHPCrawlerHTTPRequest
         $PageInfo->server_response_time = $this->server_response_time;
 
         // If error occured
-        if ($PageInfo->error_code != null) {
+        if (isset($PageInfo->error_code) && $PageInfo->error_code > 0) {
             $PageInfo->error_occured = true;
             return $PageInfo;
         }
@@ -441,7 +442,7 @@ class PHPCrawlerHTTPRequest
         $PageInfo->cookies = $this->lastResponseHeader->cookies;
 
         // Referer-Infos
-        if ($this->UrlDescriptor->refering_url != null) {
+        if (isset($this->UrlDescriptor->refering_url) && $this->UrlDescriptor->refering_url != null) {
             $PageInfo->referer_url = $this->UrlDescriptor->refering_url;
             $PageInfo->refering_linkcode = $this->UrlDescriptor->linkcode;
             $PageInfo->refering_link_raw = $this->UrlDescriptor->link_raw;
@@ -457,9 +458,9 @@ class PHPCrawlerHTTPRequest
             $PageInfo->links_found_url_descriptors = $this->LinkFinder->getAllURLs(); // Maybe found a link/redirect in the header
             $PageInfo->meta_attributes = $this->LinkFinder->getAllMetaAttributes();
             return $PageInfo;
-        } else {
-            $PageInfo->received = true;
         }
+
+        $PageInfo->received = true;
 
         // Check if content should be streamd to file
         $stream_to_file = $this->decideStreamToFile($response_header);
@@ -468,7 +469,7 @@ class PHPCrawlerHTTPRequest
         $response_content = $this->readResponseContent($stream_to_file, $PageInfo->error_code, $PageInfo->error_string, $PageInfo->received_completely);
 
         // If error occured
-        if ($PageInfo->error_code != null) {
+        if (isset($PageInfo->error_code) && $PageInfo->error_code > 0) {
             $PageInfo->error_occured = true;
         }
 
@@ -571,55 +572,53 @@ class PHPCrawlerHTTPRequest
         {
             $serverName = 'SNI_server_name';
         }
+
         // Open socket
-        if ($this->proxy != null) {
-            $this->socket = stream_socket_client($this->proxy['proxy_host'] . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
-                $this->socketConnectTimeout, STREAM_CLIENT_CONNECT);
+        if (isset($this->proxy) && $this->proxy != null) {
+
+            // SSL or not?
+            if (parse_url($this->proxy['proxy_host'], PHP_URL_SCHEME) === 'https') {
+                $context = stream_context_create(array(
+                    'ssl' => array(
+                        $serverName => $this->proxy['proxy_host'],
+                    ),
+                ));
+                $protocol_prefix = "ssl://";
+                $this->socket = stream_socket_client($protocol_prefix . parse_url($this->proxy['proxy_host'], PHP_URL_HOST) . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
+                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
+
+            } else {
+                $protocol_prefix = "";
+                $this->socket = stream_socket_client($protocol_prefix . parse_url($this->proxy['proxy_host'], PHP_URL_HOST) . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
+                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT);
+            }
+
+
+
         } else {
             // If ssl -> perform Server name indication
-            try {
-                if ($this->url_parts['protocol'] === 'https://') {
+            if ($this->url_parts['protocol'] === 'https://') {
 
-                    if($this->certificateVerify){
-                        // Setup SSL connection context
-                        // Use https://curl.haxx.se/ca/cacert.pem in root dir
-                        $pemFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'cacert.pem';
+                if($this->certificateVerify){
+                    $context = stream_context_create(array(
+                        'ssl' => array(
+                            $serverName => $this->url_parts["host"],
+                        ),
+                    ));
 
-                        /*
-                        $context = stream_context_create([
-                            "ssl"=> [
-                                "local_cert" => $pemFile,
-                                "verify_peer"=> true,
-                                "verify_peer_name"=> true,
-                            ],
-                        ]);
-                        */
-
-                        $context = stream_context_create(array(
-                            'ssl' => array(
-                                $serverName => $this->url_parts["host"],
-                            ),
-                        ));
-
-                    } else {
-                        $context = stream_context_create([
-                            "ssl"=> [
-                                "verify_peer"=> false,
-                                "verify_peer_name"=> false,
-                            ],
-                        ]);
-                    }
-                    $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':443', $error_code, $error_str,
-                        $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
                 } else {
-                    $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
-                        $this->socketConnectTimeout, STREAM_CLIENT_CONNECT); // NO $context here, memory-leak-bug in php v. 5.3.x!!
+                    $context = stream_context_create([
+                        "ssl"=> [
+                            "verify_peer"=> false,
+                            "verify_peer_name"=> false,
+                        ],
+                    ]);
                 }
-
-                #die(print_r(socket_strerror(socket_last_error())));
-
-            } catch (ErrorException $e) {
-                error_log($e);
+                $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':443', $error_code, $error_str,
+                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
+            } else {
+                $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
+                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT); // NO $context here, memory-leak-bug in php v. 5.3.x!!
             }
         }
 
@@ -630,15 +629,15 @@ class PHPCrawlerHTTPRequest
             $this->server_connect_time = null;
 
             // If proxy not reachable
-            if ($this->proxy != null) {
+            if (isset($this->proxy) && $this->proxy != null) {
                 $error_code = PHPCrawlerRequestErrors::ERROR_PROXY_UNREACHABLE;
                 $error_string = 'Error connecting to proxy ' . $this->proxy['proxy_host'] . ': Host unreachable (' . $error_str . ').';
                 return false;
-            } else {
-                $error_code = PHPCrawlerRequestErrors::ERROR_HOST_UNREACHABLE;
-                $error_string = 'Error connecting to ' . $this->url_parts['protocol'] . $this->url_parts['host'] . ': Host unreachable (' . $error_str . ').';
-                return false;
             }
+
+            $error_code = PHPCrawlerRequestErrors::ERROR_HOST_UNREACHABLE;
+            $error_string = 'Error connecting to ' . $this->url_parts['protocol'] . $this->url_parts['host'] . ': Host unreachable (' . $error_str . ').';
+            return false;
         } else {
             return true;
         }
@@ -651,10 +650,9 @@ class PHPCrawlerHTTPRequest
     protected function sendRequestHeader($request_header_lines): void
     {
         // Header senden
-        $cnt = count($request_header_lines);
-        for ($x = 0; $x < $cnt; $x++) {
+        foreach ($request_header_lines as $xValue) {
             if (is_resource($this->socket)) {
-                fwrite($this->socket, $request_header_lines[$x]);
+                fwrite($this->socket, $xValue);
             }
         }
     }
@@ -711,7 +709,7 @@ class PHPCrawlerHTTPRequest
             }
 
             // No "HTTP" at beginnig of response
-            if (strtolower(substr($source_read, 0, 4)) !== 'http') {
+            if (stripos($source_read, 'http') !== 0) {
                 $error_code = PHPCrawlerRequestErrors::ERROR_NO_HTTP_HEADER;
                 $error_string = 'HTTP-protocol error.';
                 return $header;
@@ -742,6 +740,7 @@ class PHPCrawlerHTTPRequest
             $error_string = "Host doesn't respond with a HTTP-header.";
             return null;
         }
+        return null;
     }
 
     /**
@@ -849,6 +848,7 @@ class PHPCrawlerHTTPRequest
         $stop_receiving = false;
         $bytes_received = 0;
         $document_completed = false;
+        $current_chunk_size = 0;
 
         // If chunked encoding and protocol to use is HTTP 1.1
         if ($this->http_protocol_version == PHPCrawlerHTTPProtocols::HTTP_1_1 && $this->lastResponseHeader->transfer_encoding === 'chunked') {
@@ -857,7 +857,9 @@ class PHPCrawlerHTTPRequest
             if (trim($chunk_line) == '') {
                 $chunk_line = fgets($this->socket, 128);
             }
-            $current_chunk_size = hexdec(trim($chunk_line));
+            if($chunk_line !== false){
+                $current_chunk_size = @hexdec(trim($chunk_line));
+            }
         } else {
             $current_chunk_size = $this->chunk_buffer_size;
         }
@@ -954,7 +956,7 @@ class PHPCrawlerHTTPRequest
             $http_protocol_verison = "1.0";
         }
 
-        if ($this->proxy != null) {
+        if (isset($this->proxy) && $this->proxy != null) {
             // A Proxy needs the full qualified URL in the GET or POST headerline.
             $headerlines[] = $request_type . ' ' . $this->UrlDescriptor->url_rebuild . " HTTP/1.0\r\n";
         } else {
@@ -973,7 +975,7 @@ class PHPCrawlerHTTPRequest
         }
 
         // Referer
-        if ($this->UrlDescriptor->refering_url != null) {
+        if (isset($this->UrlDescriptor->refering_url) && $this->UrlDescriptor->refering_url != null) {
             $headerlines[] = 'Referer: ' . $this->UrlDescriptor->refering_url . "\r\n";
         }
 
@@ -990,7 +992,7 @@ class PHPCrawlerHTTPRequest
         }
 
         // Proxy authentication
-        if ($this->proxy != null && $this->proxy['proxy_username'] != null) {
+        if (isset($this->proxy) && $this->proxy != null && $this->proxy['proxy_username'] != null) {
             $auth_string = base64_encode($this->proxy['proxy_username'] . ':' . $this->proxy['proxy_password']);
             $headerlines[] = 'Proxy-Authorization: Basic ' . $auth_string . "\r\n";
         }
@@ -1040,8 +1042,7 @@ class PHPCrawlerHTTPRequest
         }
 
         // Replace url-specific signs back
-        $query = str_replace(['%2F', '%3F'], ['/', '?'], $query);
-        $query = str_replace(['%3D', '%26'], ['=', '&'], $query);
+        $query = str_replace(array('%2F', '%3F', '%3D', '%26'), array('/', '?', '=', '&'), $query);
 
         return $query;
     }
@@ -1083,9 +1084,9 @@ class PHPCrawlerHTTPRequest
 
         if ($cookie_string != '') {
             return 'Cookie: ' . substr($cookie_string, 2) . "\r\n";
-        } else {
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -1101,7 +1102,7 @@ class PHPCrawlerHTTPRequest
         $content_type = $responseHeader->content_type;
 
         // Call user header-check-callback-method
-        if ($this->header_check_callback_function != null) {
+        if (isset($this->header_check_callback_function) && $this->header_check_callback_function != null) {
             $ret = call_user_func($this->header_check_callback_function, $responseHeader);
             if ($ret < 0) {
                 return false;
@@ -1119,9 +1120,7 @@ class PHPCrawlerHTTPRequest
         }
 
         // Check against the given content-type-rules
-        $receive = PHPCrawlerUtils::checkStringAgainstRegexArray($content_type, $this->receive_content_types);
-
-        return $receive;
+        return PHPCrawlerUtils::checkStringAgainstRegexArray($content_type, $this->receive_content_types);
     }
 
     /**
@@ -1145,9 +1144,7 @@ class PHPCrawlerHTTPRequest
         }
 
         // Check against the given rules
-        $receive = PHPCrawlerUtils::checkStringAgainstRegexArray($content_type, $this->receive_to_file_content_types);
-
-        return $receive;
+        return PHPCrawlerUtils::checkStringAgainstRegexArray($content_type, $this->receive_to_file_content_types);
     }
 
     /**
@@ -1165,7 +1162,7 @@ class PHPCrawlerHTTPRequest
         $check = PHPCrawlerUtils::checkRegexPattern($regex); // Check pattern
 
         if ($check == true) {
-            $this->receive_content_types[] = trim(strtolower($regex));
+            $this->receive_content_types[] = strtolower(trim($regex));
         }
         return $check;
     }
@@ -1204,9 +1201,9 @@ class PHPCrawlerHTTPRequest
             fclose($fp);
             $this->tmpFile = $tmp_file;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1220,9 +1217,9 @@ class PHPCrawlerHTTPRequest
         if (preg_match('#^[0-9]*$#', $bytes)) {
             $this->content_size_limit = $bytes;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1264,9 +1261,9 @@ class PHPCrawlerHTTPRequest
         if (preg_match('#[1-2]#', $http_protocol_version)) {
             $this->http_protocol_version = $http_protocol_version;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1317,7 +1314,7 @@ class PHPCrawlerHTTPRequest
         }
 
         if ($this->content_buffer_size < $this->chunk_buffer_size || $this->chunk_buffer_size < $this->socket_read_buffer_size) {
-            throw new Exception('Implausible buffer-size-settings assigned to ' . get_class($this) . '.');
+            throw new RuntimeException('Implausible buffer-size-settings assigned to ' . get_class($this) . '.');
         }
     }
 }

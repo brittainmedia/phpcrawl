@@ -21,7 +21,7 @@ use RuntimeException;
  */
 class PHPCrawler
 {
-    public $class_version = '0.9';
+    public string $class_version = '0.9';
 
     /**
      * The PHPCrawlerHTTPRequest-Object
@@ -219,7 +219,7 @@ class PHPCrawler
      *
      * @var float
      */
-    protected $request_delay_time;
+    protected $request_delay_time = null;
 
     /**
      * Flag indicating whether the URL-cahce was purged at the beginning of a crawling-process
@@ -288,8 +288,6 @@ class PHPCrawler
 
     /**
      * Initiates a crawler-process
-     * @throws Exception
-     * @throws Exception
      */
     protected function initCrawlerProcess(): void
     {
@@ -456,22 +454,22 @@ class PHPCrawler
     {
         // Check if fork is supported
         if (!function_exists('pcntl_fork')) {
-            throw new Exception('PHPCrawl running with multi processes not supported in this PHP-environment (function pcntl_fork() missing).' .
+            throw new RuntimeException('PHPCrawl running with multi processes not supported in this PHP-environment (function pcntl_fork() missing).' .
                 'Try running from command-line (cli) and/or installing the PHP PCNTL-extension.');
         }
 
         if (!function_exists('sem_get')) {
-            throw new Exception('PHPCrawl running with multi processes not supported in this PHP-environment (function sem_get() missing).' .
+            throw new RuntimeException('PHPCrawl running with multi processes not supported in this PHP-environment (function sem_get() missing).' .
                 'Try installing the PHP SEMAPHORE-extension.');
         }
 
         if (!function_exists('posix_kill')) {
-            throw new Exception('PHPCrawl running with multi processes not supported in this PHP-environment (function posix_kill() missing).' .
+            throw new RuntimeException('PHPCrawl running with multi processes not supported in this PHP-environment (function posix_kill() missing).' .
                 'Try installing the PHP POSIX-extension.');
         }
 
         if (!class_exists('PDO')) {
-            throw new Exception('PHPCrawl running with multi processes not supported in this PHP-environment (class PDO missing).' .
+            throw new RuntimeException('PHPCrawl running with multi processes not supported in this PHP-environment (class PDO missing).' .
                 'Try installing the PHP PDO-extension.');
         }
 
@@ -507,7 +505,7 @@ class PHPCrawler
         $this->is_parent_process = true;
 
         // Determinate all child-PIDs
-        $this->child_pids = $this->ProcessHandler->getChildPIDs($process_count);
+        $child_pids = $this->ProcessHandler->getChildPIDs($process_count);
 
         // If crawler runs in MPMODE_PARENT_EXECUTES_USERCODE-mode -> start controller-loop
         if ($this->multiprocess_mode == PHPCrawlerMultiProcessModes::MPMODE_PARENT_EXECUTES_USERCODE) {
@@ -535,11 +533,12 @@ class PHPCrawler
      */
     public function goMultiProcessedWindows($process_count = 3, $multiprocess_mode = 1): void
     {
-        throw new Exception('goMultiProcessedWindows not implemented yet...');
+        throw new RuntimeException('goMultiProcessedWindows not implemented yet...');
     }
 
     /**
      * Starts the loop of the controller-process (main-process).
+     * @throws Exception
      */
     protected function startControllerProcessLoop(): void
     {
@@ -647,9 +646,9 @@ class PHPCrawler
         if ($this->is_chlid_process == true) {
             if ($this->multiprocess_mode == PHPCrawlerMultiProcessModes::MPMODE_PARENT_EXECUTES_USERCODE) {
                 return;
-            } else {
-                exit;
             }
+
+            exit;
         }
 
         $this->crawlerStatus = $this->CrawlerStatusHandler->getCrawlerStatus();
@@ -664,21 +663,15 @@ class PHPCrawler
     }
 
     /**
-     * Receives and processes the given URL
-     *
-     * @param PHPCrawlerURLDescriptor $UrlDescriptor The URL as PHPCrawlerURLDescriptor-object
-     * @return bool TURE if the crawling-process should be aborted after processig the URL, otherwise FALSE.
-     * @throws Exception
-     * @throws Exception
+     * @param PHPCrawlerURLDescriptor $UrlDescriptor
+     * @return bool
      */
     protected function processUrl(PHPCrawlerURLDescriptor $UrlDescriptor): bool
     {
         // Check for abortion from other processes first if mode is MPMODE_CHILDS_EXECUTES_USERCODE
-        if ($this->multiprocess_mode == PHPCrawlerMultiProcessModes::MPMODE_CHILDS_EXECUTES_USERCODE) {
-            // Check for abortion (any limit reached?)
-            if ($this->checkForAbort() !== null) {
-                return true;
-            }
+        // Check for abortion (any limit reached?)
+        if (($this->multiprocess_mode == PHPCrawlerMultiProcessModes::MPMODE_CHILDS_EXECUTES_USERCODE) && $this->checkForAbort() !== null) {
+            return true;
         }
 
         PHPCrawlerBenchmark::start('processing_url');
@@ -814,7 +807,7 @@ class PHPCrawler
      */
     protected function checkForAbort(): ?int
     {
-        PHPCrawlerBenchmark::start('checkning_for_abort');
+        PHPCrawlerBenchmark::start('checking_for_abort');
 
         $abort_reason = null;
 
@@ -845,7 +838,7 @@ class PHPCrawler
 
         $this->CrawlerStatusHandler->updateCrawlerStatus(null, $abort_reason);
 
-        PHPCrawlerBenchmark::stop('checkning_for_abort');
+        PHPCrawlerBenchmark::stop('checking_for_abort');
 
         return $abort_reason;
     }
@@ -857,20 +850,22 @@ class PHPCrawler
     protected function delayRequest(): void
     {
         // Delay next request only if a request-delay was set
-        if ($this->request_delay_time != null) {
-            while (true) {
-                $crawler_status = $this->CrawlerStatusHandler->getCrawlerStatus();
+        if (isset($this->request_delay_time)) {
+            if ($this->request_delay_time != null) {
+                while (true) {
+                    $crawler_status = $this->CrawlerStatusHandler->getCrawlerStatus();
 
-                // Wait if the time of the last request isn't way back enough
-                if ($crawler_status->last_request_time + $this->request_delay_time > PHPCrawlerBenchmark::getmicrotime()) {
-                    usleep($this->request_delay_time * 1000000 / 2);
-                } else {
-                    break;
+                    // Wait if the time of the last request isn't way back enough
+                    if ($crawler_status->last_request_time + $this->request_delay_time > PHPCrawlerBenchmark::getmicrotime()) {
+                        usleep($this->request_delay_time * 1000000 / 2);
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            // Update last-request-time
-            $this->CrawlerStatusHandler->updateCrawlerStatus(null, null, null, PHPCrawlerBenchmark::getmicrotime());
+                // Update last-request-time
+                $this->CrawlerStatusHandler->updateCrawlerStatus(null, null, null, PHPCrawlerBenchmark::getmicrotime());
+            }
         }
     }
 
@@ -884,7 +879,7 @@ class PHPCrawler
             $this->CrawlerStatusHandler->write_status_to_file = true;
         }
 
-        if ($this->request_delay_time != null && $this->multiprocess_mode != PHPCrawlerMultiProcessModes::MPMODE_NONE) {
+        if (isset($this->request_delay_time) && $this->request_delay_time !== null && $this->multiprocess_mode != PHPCrawlerMultiProcessModes::MPMODE_NONE) {
             $this->CrawlerStatusHandler->write_status_to_file = true;
         }
 
@@ -893,7 +888,7 @@ class PHPCrawler
             $this->CrawlerStatusHandler->lock_status_updates = true;
         }
 
-        if ($this->request_delay_time != null && $this->multiprocess_mode != PHPCrawlerMultiProcessModes::MPMODE_NONE) {
+        if ( (isset($this->request_delay_time) && $this->request_delay_time != null) && $this->multiprocess_mode != PHPCrawlerMultiProcessModes::MPMODE_NONE) {
             $this->CrawlerStatusHandler->lock_status_updates = true;
         }
     }
@@ -908,14 +903,12 @@ class PHPCrawler
 
         // Check if writable
         if (!is_writable($this->working_base_directory)) {
-            throw new Exception("Error creating working directory '" . $this->working_directory . "'");
+            throw new RuntimeException("Error creating working directory '" . $this->working_directory . "'");
         }
 
         // Create dir
-        if (!file_exists($this->working_directory)) {
-            if (!mkdir($concurrentDirectory = $this->working_directory) && !is_dir($concurrentDirectory)) {
-                throw new RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
-            }
+        if (!file_exists($this->working_directory) && !mkdir($concurrentDirectory = $this->working_directory) && !is_dir($concurrentDirectory)) {
+            throw new RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
         }
     }
 
@@ -1127,6 +1120,7 @@ class PHPCrawler
      */
     public function handleDocumentInfo(PHPCrawlerDocumentInfo $PageInfo)
     {
+        return 1;
     }
 
     /**
@@ -1151,9 +1145,9 @@ class PHPCrawler
         if ($url != '' && is_string($url)) {
             $this->starting_url = PHPCrawlerUtils::normalizeURL($url);
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1174,9 +1168,8 @@ class PHPCrawler
      *
      * @param int $port The port
      * @return bool
+     * @throws Exception
      * @section 1 Basic settings
-     * @throws Exception
-     * @throws Exception
      */
     public function setPort($port): bool
     {
@@ -1224,9 +1217,9 @@ class PHPCrawler
             $this->link_priority_array[$c]['level'] = trim($level);
 
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1609,9 +1602,9 @@ class PHPCrawler
         if (preg_match('#^[0-9]*$#', $bytes)) {
             $this->traffic_limit = $bytes;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1803,9 +1796,9 @@ class PHPCrawler
         if (is_writable($this->working_base_directory)) {
             $this->working_base_directory = $directory;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1849,9 +1842,9 @@ class PHPCrawler
         if (preg_match('#[0-9]+#', $timeout)) {
             $this->PageRequest->socketConnectTimeout = $timeout;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1870,9 +1863,9 @@ class PHPCrawler
         if (preg_match('#[0-9]+#', $timeout)) {
             $this->PageRequest->socketReadTimeout = $timeout;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -1939,9 +1932,9 @@ class PHPCrawler
         if (preg_match('#[1-2]#', $url_cache_type)) {
             $this->url_cache_type = $url_cache_type;
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -2053,14 +2046,14 @@ class PHPCrawler
     public function resume($crawler_id): void
     {
         if ($this->resumtion_enabled == false) {
-            throw new Exception("Resumption was not enalbled, call enableResumption() before calling the resume()-method!");
+            throw new RuntimeException("Resumption was not enalbled, call enableResumption() before calling the resume()-method!");
         }
 
         // Adobt crawler-id
         $this->crawler_uniqid = $crawler_id;
 
         if (!file_exists($this->working_base_directory . 'phpcrawl_tmp_' . $this->crawler_uniqid . DIRECTORY_SEPARATOR)) {
-            throw new Exception("Couldn't find any previous aborted crawling-process with crawler-id '" . $this->crawler_uniqid . "'");
+            throw new RuntimeException("Couldn't find any previous aborted crawling-process with crawler-id '" . $this->crawler_uniqid . "'");
         }
 
         $this->createWorkingDirectory();
@@ -2223,9 +2216,9 @@ class PHPCrawler
      * For instance: If the maximum depth is set to 1, the crawler only will follow links found in the entry-page
      * of the crawling-process, but won't follow any further links found in underlying documents.
      *
-     * @param int $depth The maximum link-depth the crawler should follow
-     * @section 5 Limit-settings
+     * @param $certificateData
      * @return bool
+     * @section 5 Limit-settings
      */
     public function createPEMCertificate($certificateData): bool
     {

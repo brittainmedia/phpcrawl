@@ -15,19 +15,19 @@ use PHPCrawl\Utils\PHPCrawlerUtils;
  */
 class PHPCrawlerStatusHandler
 {
-    protected $crawlerStatus;
-    protected $crawler_uniqid;
-    protected $working_directory;
+    protected PHPCrawlerStatus $crawlerStatus;
+    protected string $crawler_uniqid;
+    protected string $working_directory;
 
     /**
      * Flag indicating whether the crawler status-information should be written to a file
      */
-    public $write_status_to_file = false;
+    public bool $write_status_to_file = false;
 
     /**
      * Flag indicating whether updates to the crawler status-information should get semaphore-locked
      */
-    public $lock_status_updates = false;
+    public bool $lock_status_updates = false;
 
     /**
      * Initiates a new PHPCrawlerStatusHandler

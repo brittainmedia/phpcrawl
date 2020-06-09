@@ -7,6 +7,7 @@ use PHPCrawl\PHPCrawlerCookieDescriptor;
 use PHPCrawl\PHPCrawlerHTTPRequest;
 use PHPCrawl\PHPCrawlerURLDescriptor;
 use PHPCrawl\PHPCrawlerUrlPartsDescriptor;
+use RuntimeException;
 
 /**
  * Static util-methods used by phpcrawl.
@@ -23,22 +24,10 @@ class PHPCrawlerUtils
 
     /**
      * Splits an URL into its parts
-     *
-     * @param string $url The URL
-     * @return array       An array containig the parts of the URL
-     *
-     *                     The keys are:
-     *
-     *                     "protocol" (z.B. "http://")
-     *                     "host"     (z.B. "www.bla.de")
-     *                     "path"     (z.B. "/test/palimm/")
-     *                     "file"     (z.B. "index.htm")
-     *                     "domain"   (z.B. "foo.com")
-     *                     "port"     (z.B. 80)
-     *                     "auth_username"
-     *                     "auth_password"
+     * @param $url
+     * @return array
      */
-    public static function splitURL($url): array
+    public static function splitURL($url): ?array
     {
         // Add protocol to the URL (otherwise parse_url will not work)
         if (!preg_match('#^[a-z0-9-]+://# i', $url)) {
@@ -48,7 +37,7 @@ class PHPCrawlerUtils
         $parts = parse_url($url);
 
         if ($parts == false || !isset($parts)) {
-            throw new Exception('PHPCrawlerUtils::splitURL Failed to parse url: ' . $url);
+            return null;
         }
 
         $protocol = $parts['scheme'] . '://';
@@ -145,7 +134,7 @@ class PHPCrawlerUtils
     {
         // Host has to be set aat least
         if (!isset($url_parts['host'])) {
-            throw new Exception('Cannot generate URL, host not specified!');
+            throw new RuntimeException('Cannot generate URL, host not specified!');
         }
 
         if (!isset($url_parts['protocol']) || $url_parts['protocol'] == '') {
@@ -181,8 +170,8 @@ class PHPCrawlerUtils
 
         // Normalize
         if ($normalize == true) {
-            if (($url_parts["protocol"] == "http://" && $url_parts["port"] == 80) ||
-                ($url_parts["protocol"] == "https://" && $url_parts["port"] == 443)) {
+            if (($url_parts["protocol"] === "http://" && $url_parts["port"] == 80) ||
+                ($url_parts["protocol"] === "https://" && $url_parts["port"] == 443)) {
                 $port_part = '';
             }
 
@@ -198,9 +187,7 @@ class PHPCrawlerUtils
         }
 
         // Put together the url
-        $url = $url_parts['protocol'] . $auth_part . $url_parts['host'] . $port_part . $url_parts['path'] . $url_parts['file'] . $url_parts['query'];
-
-        return $url;
+        return $url_parts['protocol'] . $auth_part . $url_parts['host'] . $port_part . $url_parts['path'] . $url_parts['file'] . $url_parts['query'];
     }
 
     /**
@@ -212,16 +199,20 @@ class PHPCrawlerUtils
      * @return string OR NULL on failure
      * @throws Exception
      */
-    public static function normalizeURL($url): string
+    public static function normalizeURL($url): ?string
     {
-        $url_parts = self::splitURL($url);
+        // If the PHP function fails to decode the URL it is likley a bad URL, skip it
+        try {
+            $url_parts = self::splitURL($url);
+        } catch (Exception $e){
+            return null;
+        }
 
         if ($url_parts == null) {
             return null;
         }
 
-        $url_normalized = self::buildURLFromParts($url_parts, true);
-        return $url_normalized;
+        return self::buildURLFromParts($url_parts, true);
     }
 
     /**
@@ -233,11 +224,7 @@ class PHPCrawlerUtils
     public static function checkRegexPattern($pattern): ?bool
     {
         $check = preg_match($pattern, 'anything'); // thats the easy way to check a pattern ;)
-        if (is_int($check) == false) {
-            return false;
-        } else {
-            return true;
-        }
+        return !(is_int($check) == false);
     }
 
     /**
@@ -254,9 +241,9 @@ class PHPCrawlerUtils
 
         if (isset($match[0])) {
             return (int)trim($match[0]);
-        } else {
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -267,7 +254,6 @@ class PHPCrawlerUtils
      *
      * @return string The rebuild, full qualified and normilazed URL the link is leading to (i.e. "http://www.foo.com/page.htm"),
      *                or NULL if the link couldn't be rebuild correctly.
-     * @throws Exception
      */
     public static function buildURLFromLink($link, PHPCrawlerUrlPartsDescriptor $BaseUrl): ?string
     {
@@ -297,7 +283,7 @@ class PHPCrawlerUtils
 
         // 3. Link is an absolute Link with a given protocol and host (f.e. "http://..." or "android-app://...)
         // DO NOTHING
-        elseif (preg_match("#^[a-z0-9-]{1,}(:\/\/)# i", $link)) {
+        elseif (preg_match("#^[a-z0-9-]{1,}(://)# i", $link)) {
             // "silly assignment"
             $link = $link;
         } // 4. Link is stuff like "javascript: ..." or something
@@ -335,11 +321,11 @@ class PHPCrawlerUtils
             return null;
         }
 
-        if ($link == 'http://') {
+        if ($link === 'http://') {
             return null;
         }
 
-        if ($link == 'https://') {
+        if ($link === 'https://') {
             return null;
         }
 
@@ -364,16 +350,17 @@ class PHPCrawlerUtils
      * @param $html_source
      * @return string The base-URL or NULL if not found.
      */
-    public static function getBaseUrlFromMetaTag(&$html_source): ?string
+    public static function getBaseUrlFromMetaTag($html_source): ?string
     {
-        preg_match("#<{1}[ ]{0,}((?i)base){1}[ ]{1,}((?i)href|src)[ ]{0,}=[ ]{0,}(\"|'){0,1}([^\"'><\n ]{0,})(\"|'|>|<|\n| )# i", $html_source, $match);
+        preg_match("#<{1}[ ]{0,}((?i)base){1}[ ]{1,}((?i)href|src)[ ]{0,}=[ ]{0,}([\"']){0,1}([^\"'><\n ]{0,})([\"'><
+ ])# i", $html_source, $match);
 
         if (isset($match[4])) {
             $match[4] = trim($match[4]);
             return $match[4];
-        } else {
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -382,17 +369,16 @@ class PHPCrawlerUtils
      * @param $header
      * @return string The redirect-URL or NULL if not found.
      */
-    public static function getRedirectURLFromHeader(&$header): ?string
+    public static function getRedirectURLFromHeader($header): ?string
     {
         // Get redirect-link from header
         preg_match("/((?i)location:|content-location:)(.{0,})[\n]/", $header, $match);
 
         if (isset($match[2])) {
-            $redirect = trim($match[2]);
-            return $redirect;
-        } else {
-            return null;
+            return trim($match[2]);
         }
+
+        return null;
     }
 
     /**
@@ -403,14 +389,13 @@ class PHPCrawlerUtils
      *
      * @return bool TRUE if one of the regexes matches the string, otherwise FALSE.
      */
-    public static function checkStringAgainstRegexArray(&$string, $regex_array): bool
+    public static function checkStringAgainstRegexArray($string, $regex_array): bool
     {
         if (count($regex_array) == 0) {
             return true;
         }
 
-        $cnt = count($regex_array);
-        for ($x = 0; $x < $cnt; $x++) {
+        foreach ($regex_array as $x => $xValue) {
             if (preg_match($regex_array[$x], $string)) {
                 return true;
             }
@@ -433,13 +418,13 @@ class PHPCrawlerUtils
      */
     public static function getHeaderValue($header, $directive): ?string
     {
-        preg_match("#[\r\n]" . $directive . ":(.*)[\r\n\;]# Ui", $header, $match);
+        preg_match("#[\r\n]" . $directive . ":(.*)[\r\n;]# Ui", $header, $match);
 
         if (isset($match[1]) && trim($match[1]) != '') {
             return trim($match[1]);
-        } else {
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -456,8 +441,8 @@ class PHPCrawlerUtils
         $hits = preg_match_all("#[\r\n]set-cookie:(.*)[\r\n]# Ui", $header, $matches);
 
         if ($hits && $hits != 0) {
-            for ($x = 0, $xMax = count($matches[1]); $x < $xMax; $x++) {
-                $cookies[] = PHPCrawlerCookieDescriptor::getFromHeaderLine($matches[1][$x], $source_url);
+            foreach ($matches[1] as $xValue) {
+                $cookies[] = PHPCrawlerCookieDescriptor::getFromHeaderLine($xValue, $source_url);
             }
         }
 
@@ -525,9 +510,9 @@ class PHPCrawlerUtils
         if (file_exists($file)) {
             $serialized_data = file_get_contents($file);
             return unserialize($serialized_data);
-        } else {
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -577,8 +562,7 @@ class PHPCrawlerUtils
      */
     public static function getSystemTempDir(): string
     {
-        $dir = sys_get_temp_dir() . '/';
-        return $dir;
+        return sys_get_temp_dir() . '/';
     }
 
     /**
@@ -590,7 +574,7 @@ class PHPCrawlerUtils
      *               (like $tags["robots"] = "nofollow")
      *
      */
-    public static function getMetaTagAttributes(&$html_source): array
+    public static function getMetaTagAttributes($html_source): array
     {
         preg_match_all("#<\s*meta\s+" .
             "name\s*=\s*(?|\"([^\"]+)\"|'([^']+)'|([^\s><'\"]+))\s+" .
@@ -621,11 +605,7 @@ class PHPCrawlerUtils
     {
         $sample = iconv('utf-8', 'utf-8', $string);
 
-        if (md5($sample) == md5($string)) {
-            return true;
-        } else {
-            return false;
-        }
+        return md5($sample) == md5($string);
     }
 
     /**
@@ -638,9 +618,9 @@ class PHPCrawlerUtils
     {
         if (preg_match("#^[a-z0-9/.&=?%-_.!~*'()]+$# i", $string)) {
             return true;
-        } else {
-            return false;
         }
+
+        return false;
     }
 
     /**
@@ -660,11 +640,7 @@ class PHPCrawlerUtils
      */
     public static function isGzipEncoded($content): ?bool
     {
-        if (substr($content, 0, 3) === "\x1f\x8b\x08") {
-            return true;
-        } else {
-            return false;
-        }
+        return strpos($content, "\x1f\x8b\x08") === 0;
     }
 
 
@@ -690,9 +666,9 @@ class PHPCrawlerUtils
 
             if (file_exists($file) && is_readable($file)) {
                 return file_get_contents($file);
-            } else {
-                $error_str = "Error reading from file '" . $file . "'";
             }
+
+            $error_str = "Error reading from file '" . $file . "'";
         } // If protocol is "http" or "https"
         elseif ($UriParts->protocol === 'http://' || $UriParts->protocol === 'https://') {
             $uri = self::normalizeURL($uri);
@@ -707,9 +683,9 @@ class PHPCrawlerUtils
 
             if ($DocInfo->received == true) {
                 return $DocInfo->source;
-            } else {
-                $error_str = "Error reading from URL '" . $uri . "'";
             }
+
+            $error_str = "Error reading from URL '" . $uri . "'";
         } // if protocol is not supported
         else {
             $error_str = "Unsupported protocol-type '" . $UriParts->protocol . "'";
@@ -717,7 +693,7 @@ class PHPCrawlerUtils
 
         // Throw exception?
         if ($throw_exception == true) {
-            throw new Exception($error_str);
+            throw new RuntimeException($error_str);
         }
 
         return null;
@@ -731,7 +707,7 @@ class PHPCrawlerUtils
     public static function getOS(): int
     {
         $os = strtoupper(PHP_OS);
-        if (substr($os, 0, 3) === 'WIN') {
+        if (strpos($os, 'WIN') === 0) {
             return self::OS_WINDOWS;
         }
 
@@ -748,10 +724,10 @@ class PHPCrawlerUtils
      * @param string $needle
      * @return bool
      */
-    public static function startsWith(string $haystack, string $needle)
+    public static function startsWith(string $haystack, string $needle): bool
     {
         $length = strlen($needle);
-        return (substr($haystack, 0, $length) === $needle);
+        return (strpos($haystack, $needle) === 0);
     }
 
     /**
@@ -761,7 +737,7 @@ class PHPCrawlerUtils
      * @param array $certificateData
      * @return false|int
      */
-    public static function generateOpenSSLPEM(array $certificateData = array())
+    public static function generateOpenSSLPEM(string $passPhrase, array $certificateData = array()): int
     {
 
         if (count($certificateData) == 0) {
