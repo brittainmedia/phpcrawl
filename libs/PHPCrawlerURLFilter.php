@@ -140,7 +140,8 @@ class PHPCrawlerURLFilter
         $url_parts = PHPCrawlerUtils::splitURL($url->url_rebuild);
 
         // Kick out all links that are NOT of protocol "http" or "https"
-        if ($url_parts['protocol'] !== 'http://' && $url_parts['protocol'] !== 'https://') {
+        if (( !isset($url_parts) || !isset($url_parts['protocol']))
+        || ($url_parts['protocol'] !== 'http://' && $url_parts['protocol'] !== 'https://')) {
             return false;
         }
 
