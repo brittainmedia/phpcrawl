@@ -242,12 +242,12 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
 
         $this->PDO->exec('PRAGMA journal_mode = OFF');
 
-        $this->PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
+        $this->PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->PDO->setAttribute(PDO::ATTR_TIMEOUT, 100);
 
         if ($create_tables == true) {
             // Create url-table (if not exists)
-            $this->PDO->exec('CREATE TABLE IF NOT EXISTS urls (id integer PRIMARY KEY AUTOINCREMENT,
+            $created = $this->PDO->exec('CREATE TABLE IF NOT EXISTS urls (id integer PRIMARY KEY AUTOINCREMENT,
                                                          in_process bool DEFAULT 0,
                                                          processed bool DEFAULT 0,
                                                          priority_level integer,
@@ -277,18 +277,19 @@ class PHPCrawlerSQLiteURLCache extends PHPCrawlerURLCacheBase
      */
     protected function createPreparedInsertStatement(): void
     {
-        if (isset($this->PreparedInsertStatement) && $this->PreparedInsertStatement == null) {
-            // Prepared statement for URL-inserts
-            $this->PreparedInsertStatement = $this->PDO->prepare('INSERT OR IGNORE INTO urls (priority_level, distinct_hash, link_raw, linkcode, linktext, refering_url, url_rebuild, is_redirect_url, url_link_depth)
-                                                            VALUES(:priority_level,
-                                                                   :distinct_hash,
-                                                                   :link_raw,
-                                                                   :linkcode,
-                                                                   :linktext,
-                                                                   :refering_url,
-                                                                   :url_rebuild,
-                                                                   :is_redirect_url,
-                                                                   :url_link_depth);');
+        if(!isset($this->PreparedInsertStatement) || $this->PreparedInsertStatement == null) {
+            $this->PreparedInsertStatement = $this->PDO->prepare(
+                'INSERT OR IGNORE INTO urls (priority_level, distinct_hash, link_raw, linkcode, linktext, refering_url, url_rebuild, is_redirect_url, url_link_depth)
+                                                                VALUES(:priority_level,
+                                                                       :distinct_hash,
+                                                                       :link_raw,
+                                                                       :linkcode,
+                                                                       :linktext,
+                                                                       :refering_url,
+                                                                       :url_rebuild,
+                                                                       :is_redirect_url,
+                                                                       :url_link_depth);'
+            );
         }
     }
 
