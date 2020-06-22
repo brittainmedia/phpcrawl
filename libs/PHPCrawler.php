@@ -21,7 +21,7 @@ use RuntimeException;
  */
 class PHPCrawler
 {
-    public string $class_version = '0.9';
+    public $class_version = '0.9';
 
     /**
      * The PHPCrawlerHTTPRequest-Object
