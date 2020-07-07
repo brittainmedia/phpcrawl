@@ -136,8 +136,12 @@ class PHPCrawlerURLFilter
      */
     protected function urlMatchesRules(PHPCrawlerURLDescriptor $url): bool
     {
-        // URL-parts of the URL to check against the filter-rules
-        $url_parts = PHPCrawlerUtils::splitURL($url->url_rebuild);
+        try{
+            // URL-parts of the URL to check against the filter-rules
+            $url_parts = PHPCrawlerUtils::splitURL($url->url_rebuild);
+        } catch (Throwable $t) {
+            return false;
+        }
 
         // Kick out all links that are NOT of protocol "http" or "https"
         if (( !isset($url_parts) || !isset($url_parts['protocol']))
