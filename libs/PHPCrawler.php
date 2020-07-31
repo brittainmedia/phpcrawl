@@ -21,7 +21,7 @@ use RuntimeException;
  */
 class PHPCrawler
 {
-    public $class_version = '0.9';
+    public string $class_version = '0.9';
 
     /**
      * The PHPCrawlerHTTPRequest-Object
@@ -1840,6 +1840,11 @@ class PHPCrawler
     public function setConnectionTimeout($timeout): ?bool
     {
         if (preg_match('#[0-9]+#', $timeout)) {
+
+            // Override default php ini to be sure
+            ini_set('default_socket_timeout', $timeout);
+
+
             $this->PageRequest->socketConnectTimeout = $timeout;
             return true;
         }

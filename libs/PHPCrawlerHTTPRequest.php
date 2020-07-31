@@ -573,54 +573,61 @@ class PHPCrawlerHTTPRequest
             $serverName = 'SNI_server_name';
         }
 
-        // Open socket
-        if (isset($this->proxy) && $this->proxy != null) {
+        try {
+            // Open socket
+            if (isset($this->proxy) && $this->proxy != null) {
 
-            // SSL or not?
-            if (parse_url($this->proxy['proxy_host'], PHP_URL_SCHEME) === 'https') {
-                $context = stream_context_create(array(
-                    'ssl' => array(
-                        $serverName => $this->proxy['proxy_host'],
-                    ),
-                ));
-                $protocol_prefix = "ssl://";
-                $this->socket = stream_socket_client($protocol_prefix . parse_url($this->proxy['proxy_host'], PHP_URL_HOST) . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
-                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
-
-            } else {
-                $protocol_prefix = "";
-                $this->socket = stream_socket_client($protocol_prefix . parse_url($this->proxy['proxy_host'], PHP_URL_HOST) . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
-                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT);
-            }
-
-
-
-        } else {
-            // If ssl -> perform Server name indication
-            if ($this->url_parts['protocol'] === 'https://') {
-
-                if($this->certificateVerify){
+                // SSL or not?
+                if (parse_url($this->proxy['proxy_host'], PHP_URL_SCHEME) === 'https') {
                     $context = stream_context_create(array(
                         'ssl' => array(
-                            $serverName => $this->url_parts["host"],
+                            $serverName => $this->proxy['proxy_host'],
                         ),
                     ));
+                    $protocol_prefix = "ssl://";
+                    $this->socket = stream_socket_client($protocol_prefix . parse_url($this->proxy['proxy_host'], PHP_URL_HOST) . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
+                        $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
 
                 } else {
-                    $context = stream_context_create([
-                        "ssl"=> [
-                            "verify_peer"=> false,
-                            "verify_peer_name"=> false,
-                        ],
-                    ]);
+                    $protocol_prefix = "";
+                    $this->socket = stream_socket_client($protocol_prefix . parse_url($this->proxy['proxy_host'], PHP_URL_HOST) . ':' . $this->proxy['proxy_port'], $error_code, $error_str,
+                        $this->socketConnectTimeout, STREAM_CLIENT_CONNECT);
                 }
-                $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':443', $error_code, $error_str,
-                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
+
+
+
             } else {
-                $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
-                    $this->socketConnectTimeout, STREAM_CLIENT_CONNECT); // NO $context here, memory-leak-bug in php v. 5.3.x!!
+                // If ssl -> perform Server name indication
+                if ($this->url_parts['protocol'] === 'https://') {
+
+                    if($this->certificateVerify){
+                        $context = stream_context_create(array(
+                            'ssl' => array(
+                                $serverName => $this->url_parts["host"],
+                            ),
+                        ));
+
+                    } else {
+                        $context = stream_context_create([
+                            "ssl"=> [
+                                "verify_peer"=> false,
+                                "verify_peer_name"=> false,
+                            ],
+                        ]);
+                    }
+                    $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':443', $error_code, $error_str,
+                        $this->socketConnectTimeout, STREAM_CLIENT_CONNECT, $context);
+                } else {
+                    $this->socket = stream_socket_client($protocol_prefix . $ip_address . ':' . $this->url_parts['port'], $error_code, $error_str,
+                        $this->socketConnectTimeout, STREAM_CLIENT_CONNECT); // NO $context here, memory-leak-bug in php v. 5.3.x!!
+                }
+
             }
+        } catch(\ErrorException $e){
+            $error_string .= $e;
+            $this->socket = false;
         }
+
 
         $this->server_connect_time = PHPCrawlerBenchmark::stop('connecting_server');
 
@@ -631,12 +638,12 @@ class PHPCrawlerHTTPRequest
             // If proxy not reachable
             if (isset($this->proxy) && $this->proxy != null) {
                 $error_code = PHPCrawlerRequestErrors::ERROR_PROXY_UNREACHABLE;
-                $error_string = 'Error connecting to proxy ' . $this->proxy['proxy_host'] . ': Host unreachable (' . $error_str . ').';
+                $error_string .= 'Error connecting to proxy ' . $this->proxy['proxy_host'] . ': Host unreachable (' . $error_str . ').';
                 return false;
             }
 
             $error_code = PHPCrawlerRequestErrors::ERROR_HOST_UNREACHABLE;
-            $error_string = 'Error connecting to ' . $this->url_parts['protocol'] . $this->url_parts['host'] . ': Host unreachable (' . $error_str . ').';
+            $error_string .= 'Error connecting to ' . $this->url_parts['protocol'] . $this->url_parts['host'] . ': Host unreachable (' . $error_str . ').';
             return false;
         } else {
             return true;
