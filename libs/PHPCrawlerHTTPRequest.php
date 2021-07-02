@@ -412,7 +412,7 @@ class PHPCrawlerHTTPRequest
         // If error occured
         if (isset($PageInfo->error_code) && $PageInfo->error_code > 0) {
             // If proxy-error -> throw exception
-            if ($PageInfo->error_code == PHPCrawlerRequestPHPCrawlerLinkFinderErrors::ERROR_PROXY_UNREACHABLE) {
+            if ($PageInfo->error_code == PHPCrawlerRequestErrors::ERROR_PROXY_UNREACHABLE) {
                 throw new RuntimeException("Unable to connect to proxy '" . $this->proxy['proxy_host'] . "' on port '" . $this->proxy['proxy_port'] . "'");
             }
 
